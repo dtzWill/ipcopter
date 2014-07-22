@@ -40,14 +40,18 @@ ssize_t do_ipc_send(int fd, const void *buf, size_t count, int flags) {
   ipc_info *i = getFDDesc(fd);
   assert(i->valid);
 
-  int sendfd = fd;
-  if (i->state == STATE_OPTIMIZED)
-    sendfd = i->localfd;
-  assert(sendfd);
+  // If localized, just send data on fast socket:
+  if (i->state == STATE_OPTIMIZED) {
+    return __real_send(i->localfd, buf, count, flags);
+  }
 
-  ssize_t ret = __real_send(sendfd, buf, count, flags);
+  // Otherwise, send on original fd:
+  ssize_t ret = __real_send(fd, buf, count, flags);
 
-  if (i->state == STATE_UNOPT && ret != -1) {
+  // We don't handle other states yet
+  assert(i->state == STATE_UNOPT);
+
+  if (ret != -1) {
     // Successful operation, add to running total.
     i->bytes_trans += ret;
 
@@ -67,14 +71,18 @@ ssize_t do_ipc_recv(int fd, void *buf, size_t count, int flags) {
   ipc_info *i = getFDDesc(fd);
   assert(i->valid);
 
-  int recvfd = fd;
-  if (i->state == STATE_OPTIMIZED)
-    recvfd = i->localfd;
-  assert(recvfd);
+  // If localized, just recv data on fast socket:
+  if (i->state == STATE_OPTIMIZED) {
+    return __real_recv(i->localfd, buf, count, flags);
+  }
 
-  ssize_t ret = __real_recv(recvfd, buf, count, flags);
+  // Otherwise, recv on original fd:
+  ssize_t ret = __real_recv(fd, buf, count, flags);
 
-  if (i->state == STATE_UNOPT && ret != -1) {
+  // We don't handle other states yet
+  assert(i->state == STATE_UNOPT);
+
+  if (ret != -1) {
     // Successful operation, add to running total.
     i->bytes_trans += ret;
 
