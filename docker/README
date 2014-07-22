@@ -1,0 +1,11 @@
+ipcopter/docker
+
+Contains 'Dockerfile's for creation
+of ipcopter-ified docker containers
+for easier testing of functionality.
+
+(This allows me to break the system
+in the container without harming
+my development environment,
+and makes 'clean up' from crazy
+failures much easier)
