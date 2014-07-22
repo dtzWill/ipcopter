@@ -49,7 +49,28 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
   }
 
   // Otherwise, use original fd:
-  ssize_t ret = IO(fd, buf, count, flags);
+  ssize_t rem = (TRANS_THRESHOLD - i->bytes_trans);
+  char *bytes = (char *)(uintptr_t(buf));
+  if (rem > 0 && size_t(rem) < count) {
+    while (rem > 0) {
+      ssize_t ret = IO(fd, bytes, rem, flags);
+
+      if (ret == -1) {
+        return ret;
+      }
+
+      count -= ret;
+      rem -= ret;
+      i->bytes_trans += ret;
+      bytes += ret;
+    }
+
+    if (i->bytes_trans == TRANS_THRESHOLD) {
+      ipclog("Completed partial operation to sync at THRESHOLD!\n");
+    }
+  }
+
+  ssize_t ret = IO(fd, bytes, count, flags);
 
   // We don't handle other states yet
   assert(i->state == STATE_UNOPT);
