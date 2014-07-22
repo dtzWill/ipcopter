@@ -36,13 +36,13 @@ FILE *getlogfp() {
 #endif
 
   // TODO: Definitely not thread-safe O:)
-  
+
   if (logfp) {
     fclose(logfp);
     logfp = NULL;
   }
 
-  const char *pid_template =  "/tmp/ipcd.%d.log";
+  const char *pid_template = "/tmp/ipcd.%d.log";
   char buf[100];
 
   sprintf(buf, pid_template, newmypid);
@@ -55,10 +55,9 @@ FILE *getlogfp() {
   return logfp;
 }
 
-extern "C" void __assert_fail(const char *assertion,
-                         const char *file, unsigned int line,
-                         const char *function) {
-  ipclog("Assertion '%s' failed at %s:%d in %s\n",
-         assertion, file, line, function);
+extern "C" void __assert_fail(const char *assertion, const char *file,
+                              unsigned int line, const char *function) {
+  ipclog("Assertion '%s' failed at %s:%d in %s\n", assertion, file, line,
+         function);
   abort();
 }

@@ -42,9 +42,8 @@ ssize_t recvfrom(int fd, void *buffer, size_t length, int flags,
   return __internal_recvfrom(fd, buffer, length, flags, address, address_len);
 }
 
-ssize_t sendto(int fd, const void *message, size_t length,
-                               int flags, const struct sockaddr *dest_addr,
-                               socklen_t dest_len) {
+ssize_t sendto(int fd, const void *message, size_t length, int flags,
+               const struct sockaddr *dest_addr, socklen_t dest_len) {
   return __internal_sendto(fd, message, length, flags, dest_addr, dest_len);
 }
 
@@ -91,9 +90,8 @@ ssize_t __real_recvfrom(int fd, void *buffer, size_t length, int flags,
   CALL_REAL(recvfrom, fd, buffer, length, flags, address, address_len);
 }
 
-ssize_t __real_sendto(int fd, const void *message, size_t length,
-                               int flags, const struct sockaddr *dest_addr,
-                               socklen_t dest_len) {
+ssize_t __real_sendto(int fd, const void *message, size_t length, int flags,
+                      const struct sockaddr *dest_addr, socklen_t dest_len) {
   CALL_REAL(sendto, fd, message, length, flags, dest_addr, dest_len);
 }
 

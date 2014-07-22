@@ -27,5 +27,4 @@
   static FPTY FP = (FPTY)get_libc_func(#name);                                 \
   return FP(__VA_ARGS__);
 
-
 #endif // _WRAPPER_H_

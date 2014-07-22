@@ -36,8 +36,8 @@ static int mypid = 0;
 const char *SOCK_PATH = "/tmp/ipcd.sock";
 const char *IPCD_BIN_PATH = "/bin/ipcd";
 
-const char *PRELOAD_PATH="/etc/ld.so.preload";
-const char *PRELOAD_TMP="/tmp/preload.cfg";
+const char *PRELOAD_PATH = "/etc/ld.so.preload";
+const char *PRELOAD_TMP = "/tmp/preload.cfg";
 
 void connect_to_ipcd() {
   int s, t, len;
@@ -54,19 +54,19 @@ void connect_to_ipcd() {
   if (connect(s, (struct sockaddr *)&remote, len) == -1) {
     if (errno == ENOENT || errno == ECONNREFUSED) {
       rename(PRELOAD_PATH, PRELOAD_TMP);
-      switch(fork()) {
-        case -1:
-            break;
-        case 0:
-            // Child
-            execl(IPCD_BIN_PATH, IPCD_BIN_PATH, 0);
-            perror("Failed to exec ipcd");
-            assert(0 && "Exec failed?");
-            break;
-        default:
-            // Wait for ipcd to start :P
-            ipclog("Starting ipcd...\n");
-            sleep(1);
+      switch (fork()) {
+      case -1:
+        break;
+      case 0:
+        // Child
+        execl(IPCD_BIN_PATH, IPCD_BIN_PATH, 0);
+        perror("Failed to exec ipcd");
+        assert(0 && "Exec failed?");
+        break;
+      default:
+        // Wait for ipcd to start :P
+        ipclog("Starting ipcd...\n");
+        sleep(1);
       }
       rename(PRELOAD_TMP, PRELOAD_PATH);
       if (connect(s, (struct sockaddr *)&remote, len) == -1) {
@@ -129,17 +129,11 @@ void ipcd_lock() {
   };
 }
 
-void ipcd_unlock() {
-  __sync_lock_release(&connect_lock);
-}
+void ipcd_unlock() { __sync_lock_release(&connect_lock); }
 
 struct IPCLock {
-  IPCLock() {
-    ipcd_lock();
-  }
-  ~IPCLock() {
-    ipcd_unlock();
-  }
+  IPCLock() { ipcd_lock(); }
+  ~IPCLock() { ipcd_unlock(); }
 };
 
 void connect_if_needed() {
@@ -217,7 +211,7 @@ int ipcd_getlocalfd(endpoint local) {
   {
     // Lots of magic
     const size_t CONTROLLEN = CMSG_LEN(sizeof(int));
-    struct iovec    iov[1];
+    struct iovec iov[1];
     struct msghdr msg;
     struct cmsghdr *cmsg;
     char cmsg_buf[CONTROLLEN];
@@ -240,7 +234,7 @@ int ipcd_getlocalfd(endpoint local) {
 
     // TODO: Understand and fix mismatch between
     // CONTROLLEN and msg.msg_controllen after recvmsg()!
-    fd = *(int*)CMSG_DATA(cmsg);
+    fd = *(int *)CMSG_DATA(cmsg);
     ipclog("received local fd %d for endpoint %d\n", fd, local);
   }
 

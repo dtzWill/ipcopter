@@ -89,7 +89,6 @@ static inline ssize_t __internal_sendto(int fd, const void *message,
   return ret;
 }
 
-
 EXTERN_C ssize_t __real_read(int fd, void *buf, size_t count);
 static inline ssize_t __internal_read(int fd, void *buf, size_t count) {
   ssize_t ret;
@@ -156,8 +155,7 @@ static inline int __internal_close(int fd) {
   int ret = __real_close(fd);
   if (fd == -1) {
     ipclog("close(-1)??\n");
-  }
-  else {
+  } else {
     unregister_inet_socket(fd);
   }
   return ret;

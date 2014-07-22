@@ -64,8 +64,6 @@ void unregister_inet_socket(int fd) {
   }
 }
 
-
-
 // TODO: Inline this
 char is_registered_socket(int fd) {
   ipc_info *i = getFDDesc(fd);

@@ -32,9 +32,7 @@ typedef struct {
 const unsigned TABLE_SIZE = 1 << 10;
 extern ipc_info IpcDescTable[TABLE_SIZE];
 
-static inline char inbounds_fd(int fd) {
-  return (unsigned)fd <= TABLE_SIZE;
-}
+static inline char inbounds_fd(int fd) { return (unsigned)fd <= TABLE_SIZE; }
 
 static inline ipc_info *getFDDesc(int fd) {
   assert(inbounds_fd(fd));
