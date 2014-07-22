@@ -17,8 +17,10 @@ RUN apt-get install -y strace psmisc vim
 RUN apt-get install -y netperf
 
 # Inject latest versions of the library and daemon:
-ADD libipc.so /lib/
-ADD ipcd /bin/
+ADD tmp/libipc.so /lib/
+ADD tmp/ipcd /bin/
 
 # Ask dynamic linker to preload libipc.so into everything!
 RUN echo "/lib/libipc.so" >> /etc/ld.so.preload
+
+CMD /bin/bash
