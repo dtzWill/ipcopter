@@ -231,3 +231,26 @@ func TestRemoveAll(t *testing.T) {
 	CheckReq("REMOVEALL 2\n", "200 REMOVED 1", t)
 
 }
+
+func TestEndpointKludge(t *testing.T) {
+	P := StartServerProcess()
+	defer P.Kill()
+
+	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
+	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
+	CheckReq("REGISTER 1 20\n", "200 ID 2", t)
+	CheckReq("REGISTER 2 10\n", "200 ID 3", t)
+	CheckReq("REGISTER 2 15\n", "200 ID 4", t)
+
+	// I want NOPAIR to be different than 200 (201?),
+	// but current code makes that more trouble than it's
+	// worth.
+	CheckReq("ENDPOINT_KLUDGE 0\n", "200 NOPAIR", t)
+	CheckReq("ENDPOINT_KLUDGE 0\n", "200 NOPAIR", t)
+	CheckReq("ENDPOINT_KLUDGE 0\n", "200 NOPAIR", t)
+	CheckReq("ENDPOINT_KLUDGE 1\n", "200 PAIR 0", t)
+	CheckReq("ENDPOINT_KLUDGE 1\n", "200 PAIR 0", t)
+	CheckReq("ENDPOINT_KLUDGE 0\n", "200 PAIR 1", t)
+
+	CheckReq("LOCALIZE 0 1\n", "200 OK", t)
+}

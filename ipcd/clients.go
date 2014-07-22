@@ -193,6 +193,23 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 
 		removed := Ctxt.removeall(PID)
 		return fmt.Sprintf("REMOVED %d", removed), nil
+	case "ENDPOINT_KLUDGE":
+		// ENDPOINT_KLUDGE <endpoint id>
+		EP, err := strconv.Atoi(spaceDelimTokens[1])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+
+		Pair, err := Ctxt.pairkludge(EP)
+		if err != nil {
+			RErr = UnknownErr(err.Error())
+			return
+		}
+		if Pair == EP {
+			return "NOPAIR", nil
+		}
+		return fmt.Sprintf("PAIR %d", Pair), nil
 	default:
 		RErr = &ReqError{REQ_ERR_UNRECOGNIZED_CMD, "Unrecognized command"}
 		return

@@ -18,9 +18,10 @@ type LocalInfo struct {
 }
 
 type EndPoint struct {
-	PID  int
-	FD   int
-	Info *LocalInfo
+	PID        int
+	FD         int
+	Info       *LocalInfo
+	KludgePair *EndPoint
 }
 
 type IPCContext struct {
@@ -28,6 +29,8 @@ type IPCContext struct {
 	EPMap  map[int]*EndPoint
 	Lock   sync.Mutex
 	FreeID int
+	// Used for EP sync kludge
+	WaitingEP *EndPoint
 }
 
 func NewContext() *IPCContext {
@@ -37,11 +40,19 @@ func NewContext() *IPCContext {
 	return C
 }
 
+// EP's contain extra information
+// that should be refactored out,
+// but until then strip it when
+// looking it up by-value in IDMap
+func bareEP(EP *EndPoint) EndPoint {
+	return EndPoint{EP.PID, EP.FD, nil, nil}
+}
+
 func (C *IPCContext) register(PID, FD int) (int, error) {
 	C.Lock.Lock()
 	defer C.Lock.Unlock()
 
-	EP := EndPoint{PID, FD, nil}
+	EP := EndPoint{PID, FD, nil, nil /* kludge pair */}
 	if _, exist := C.IDMap[EP]; exist {
 		return 0, errors.New("Duplicate registration!")
 	}
@@ -129,7 +140,7 @@ func (C *IPCContext) unregister(ID int) error {
 	}
 
 	// Remove enties from map
-	delete(C.IDMap, *EP)
+	delete(C.IDMap, bareEP(EP))
 	delete(C.EPMap, ID)
 
 	// TODO: "Un-localize" endpoint?
@@ -168,8 +179,39 @@ func (C *IPCContext) removeall(PID int) int {
 			EP.Info.A.LocalFD.Close()
 			EP.Info.B.LocalFD.Close()
 		}
-		delete(C.IDMap, *EP)
+		delete(C.IDMap, bareEP(EP))
 	}
 
 	return count
+}
+
+func (C *IPCContext) pairkludge(ID int) (int, error) {
+	C.Lock.Lock()
+	defer C.Lock.Unlock()
+
+	EP, exist := C.EPMap[ID]
+	if !exist {
+		return ID, errors.New(fmt.Sprintf("Invalid Endpoint ID '%d'", ID))
+	}
+
+	// If already kludge-paired this, return its kludge-pal
+	if EP.KludgePair != nil {
+		return C.IDMap[bareEP(EP.KludgePair)], nil
+	}
+
+	// Otherwise, is there a pair candidate waiting?
+	Waiting := C.WaitingEP
+	if Waiting != nil && Waiting != EP {
+		EP.KludgePair = Waiting
+		Waiting.KludgePair = EP
+		C.WaitingEP = nil
+		return C.IDMap[bareEP(Waiting)], nil
+	}
+
+	// Nope, well track this in case someone
+	// comes looking for this unpaired endpoint:
+
+	C.WaitingEP = EP
+
+	return ID, nil
 }
