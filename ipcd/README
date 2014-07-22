@@ -1,0 +1,4 @@
+Requires Go.
+
+'go build': produces ipcd binary
+'go test': run ipcd tests
