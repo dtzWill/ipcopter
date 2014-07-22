@@ -52,6 +52,11 @@ void connect_to_ipcd() {
   strcpy(remote.sun_path, SOCK_PATH);
   len = strlen(remote.sun_path) + sizeof(remote.sun_family);
   if (connect(s, (struct sockaddr *)&remote, len) == -1) {
+    // XXX: Super kludge!
+    // If we can't connect to daemon, assume it hasn't been
+    // started yet and attempt to run it ourselves.
+    // This code is terrible, and is likely to break
+    // badly in many situations, but works for now.
     if (errno == ENOENT || errno == ECONNREFUSED) {
       rename(PRELOAD_PATH, PRELOAD_TMP);
       switch (fork()) {
