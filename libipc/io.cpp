@@ -99,7 +99,7 @@ ssize_t do_ipc_sendto(int fd, const void *message, size_t length, int flags,
   assert(!dest_addr);
 
   // As a bonus from the above check, we can forward to plain send()
-  return __real_send(fd, message, length, flags);
+  return do_ipc_send(fd, message, length, flags);
 }
 ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
                         struct sockaddr *address, socklen_t *address_len) {
@@ -110,5 +110,5 @@ ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
   assert(!address);
 
   // As a bonus from the above check, we can forward to plain recv()
-  return __real_recv(fd, buffer, length, flags);
+  return do_ipc_recv(fd, buffer, length, flags);
 }
