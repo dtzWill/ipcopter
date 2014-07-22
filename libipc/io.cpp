@@ -53,11 +53,11 @@ ssize_t do_ipc_send(int fd, const void *buf, size_t count, int flags) {
 
     if (i->bytes_trans > TRANS_THRESHOLD) {
       ipclog("send of %zu bytes crosses threshold for fd=%d\n", ret, fd);
-    }
 
-    // Fake localization of this for now:
-    i->localfd = fd;
-    i->state = STATE_OPTIMIZED;
+      // Fake localization of this for now:
+      i->localfd = fd;
+      i->state = STATE_OPTIMIZED;
+    }
   }
 
   return ret;
@@ -80,11 +80,11 @@ ssize_t do_ipc_recv(int fd, void *buf, size_t count, int flags) {
 
     if (i->bytes_trans > TRANS_THRESHOLD) {
       ipclog("recv of %zu bytes crosses threshold for fd=%d\n", ret, fd);
-    }
 
-    // Fake localization of this for now:
-    i->localfd = fd;
-    i->state = STATE_OPTIMIZED;
+      // Fake localization of this for now:
+      i->localfd = fd;
+      i->state = STATE_OPTIMIZED;
+    }
   }
 
   return ret;
