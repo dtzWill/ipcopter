@@ -9,3 +9,26 @@ in the container without harming
 my development environment,
 and makes 'clean up' from crazy
 failures much easier)
+
+
+Quick instructions:
+
+1) Build libc6-dev container:
+  $ cd libc-dev
+  $ docker build -t wdtz/libc-dev .
+2) Build ipc-test container (builds other components of ipcopter):
+  $ cd ../ipc-test
+  $ ./build.sh
+3) Launch a bash shell in the ipcopter-ized container you just made:
+  $ docker run -i -t wdtz/ipc-hook /bin/bash
+
+
+Note:
+
+Repeated use of this script will slowly
+consume more disk space, since every build
+is tagged as the next version of the container.
+
+Cleaning old containers regularly is probably
+a good idea, just like being sure to remove
+images backing no-longer-running containers.
