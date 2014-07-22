@@ -48,7 +48,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
     return IO(i->localfd, buf, count, flags);
   }
 
-  // Otherwise, send on original fd:
+  // Otherwise, use original fd:
   ssize_t ret = IO(fd, buf, count, flags);
 
   // We don't handle other states yet
