@@ -39,10 +39,12 @@ void copy_bufsizes(int src, int dst) {
 ssize_t do_ipc_send(int fd, const void *buf, size_t count, int flags) {
   ipc_info *i = getFDDesc(fd);
   assert(i->valid);
-  if (i->local) {
+  switch (i->state) {
+  case STATE_OPTIMIZED:
     return __real_send(i->localfd, buf, count, flags);
-  } else if ((i->bytes_trans += count) > TRANS_THRESHOLD) {
-    ipclog("send of %zu bytes crosses threshold for fd=%d\n", count, fd);
+  default:
+    if ((i->bytes_trans += count) > TRANS_THRESHOLD) {
+      ipclog("send of %zu bytes crosses threshold for fd=%d\n", count, fd);
 #if 0
     assert(fd == 4);
     assert(i->ep == 1);
@@ -54,20 +56,23 @@ ssize_t do_ipc_send(int fd, const void *buf, size_t count, int flags) {
 
     copy_bufsizes(fd, i->localfd);
 #else
-    i->local = true;
-    i->localfd = fd;
+      i->localfd = fd;
+      i->state = STATE_OPTIMIZED;
 #endif
+    }
+    return __real_send(fd, buf, count, flags);
   }
-  return __real_send(fd, buf, count, flags);
 }
 
 ssize_t do_ipc_recv(int fd, void *buf, size_t count, int flags) {
   ipc_info *i = getFDDesc(fd);
   assert(i->valid);
-  if (i->local) {
+  switch (i->state) {
+  case STATE_OPTIMIZED:
     return __real_recv(i->localfd, buf, count, flags);
-  } else if ((i->bytes_trans += count) > TRANS_THRESHOLD) {
-    ipclog("recv of %zu bytes crosses threshold for fd=%d\n", count, fd);
+  default:
+    if ((i->bytes_trans += count) > TRANS_THRESHOLD) {
+      ipclog("recv of %zu bytes crosses threshold for fd=%d\n", count, fd);
 #if 0
     i->local = true;
     // TODO: Async!
@@ -75,11 +80,12 @@ ssize_t do_ipc_recv(int fd, void *buf, size_t count, int flags) {
 
     copy_bufsizes(fd, i->localfd);
 #else
-    i->local = true;
-    i->localfd = fd;
+      i->localfd = fd;
+      i->state = STATE_OPTIMIZED;
 #endif
+    }
+    return __real_recv(fd, buf, count, flags);
   }
-  return __real_recv(fd, buf, count, flags);
 }
 
 ssize_t do_ipc_sendto(int fd, const void *message, size_t length, int flags,

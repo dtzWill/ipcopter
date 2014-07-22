@@ -18,13 +18,18 @@
 
 #include <assert.h>
 
+typedef enum {
+  STATE_UNOPT = 0,
+  STATE_ID_EXCHANGE,
+  STATE_OPTIMIZED,
+} EndpointState;
+
 typedef struct {
   size_t bytes_trans;
   int localfd;
   endpoint ep;
-  char valid;
-  char local;
-  // More data (key, handle to ipc channel, etc.)
+  EndpointState state;
+  bool valid;
 } ipc_info;
 
 // For now, just index directly into pre-allocate table with fd.

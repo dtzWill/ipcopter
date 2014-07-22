@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+// TODO: This table is presently not used thread-safe at all!
 ipc_info IpcDescTable[TABLE_SIZE] = {};
 
 void register_inet_socket(int fd) {
@@ -35,9 +36,14 @@ void register_inet_socket(int fd) {
   assert(!i->valid);
   endpoint ep = ipcd_register_socket(fd);
   assert(ep != EP_INVALID);
+  // Initialize!
+  i->bytes_trans = 0;
+  i->localfd = 0;
   i->ep = ep;
-  i->valid = 1;
+  i->state = STATE_UNOPT;
+  i->valid = true;
 }
+
 void unregister_inet_socket(int fd) {
   if (!inbounds_fd(fd)) {
     return;
@@ -56,11 +62,17 @@ void unregister_inet_socket(int fd) {
     assert(success);
     // TODO: Should IPCD do this? *Can* it?
     if (i->localfd) {
+      assert(i->state == STATE_OPTIMIZED);
       __real_close(i->localfd);
     }
     assert(i->valid);
-    i->valid = 0;
+    // Mark table entry as invalid
+    i->valid = false;
+    // And invalidate the data it contains for good measure
+    i->bytes_trans = 0;
+    i->localfd = 0;
     i->ep = EP_INVALID;
+    i->state = STATE_UNOPT;
   }
 }
 
