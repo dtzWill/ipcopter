@@ -40,7 +40,7 @@ const char *PRELOAD_PATH = "/etc/ld.so.preload";
 const char *PRELOAD_TMP = "/tmp/preload.cfg";
 
 void connect_to_ipcd() {
-  int s, t, len;
+  int s, len;
   struct sockaddr_un remote;
 
   if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -64,7 +64,7 @@ void connect_to_ipcd() {
         break;
       case 0:
         // Child
-        execl(IPCD_BIN_PATH, IPCD_BIN_PATH, 0);
+        execl(IPCD_BIN_PATH, IPCD_BIN_PATH, (char *)NULL);
         perror("Failed to exec ipcd");
         assert(0 && "Exec failed?");
         break;
@@ -116,7 +116,7 @@ void __attribute__((destructor)) ipcd_dtor() {
 
   const char *match = "200 REMOVED ";
   size_t matchlen = strlen(match);
-  if (err < matchlen) {
+  if (size_t(err) < matchlen) {
     perror("read");
     exit(1);
   }

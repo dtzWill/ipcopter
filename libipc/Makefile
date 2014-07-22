@@ -10,8 +10,8 @@ DYNAMIC_LIB := libipc.so
 SHARED_LDFLAGS = -shared $(WRAP_FLAGS) -ldl
 
 OPTFLAGS := -O3
-CFLAGS := $(OPTFLAGS) -fPIC
-CXXFLAGS := $(OPTFLAGS) -fPIC
+CFLAGS := $(OPTFLAGS) -fPIC -Wall -Wextra -Werror
+CXXFLAGS := $(OPTFLAGS) -fPIC -Wall -Wextra -Werror
 
 C_DEPS := $(wildcard *.c)
 CXX_DEPS := $(wildcard *.cpp)

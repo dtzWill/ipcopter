@@ -80,7 +80,8 @@ ssize_t do_ipc_recv(int fd, void *buf, size_t count, int flags) {
 }
 
 ssize_t do_ipc_sendto(int fd, const void *message, size_t length, int flags,
-                      const struct sockaddr *dest_addr, socklen_t dest_len) {
+                      const struct sockaddr *dest_addr,
+                      socklen_t /* unused */) {
   // if (dest_addr)
   //  return __real_sendto(fd, message, length, flags, dest_addr, dest_len);
   // Hardly safe, but if it's non-NULL there's a chance
@@ -91,7 +92,7 @@ ssize_t do_ipc_sendto(int fd, const void *message, size_t length, int flags,
   return do_ipc_send(fd, message, length, flags);
 }
 ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
-                        struct sockaddr *address, socklen_t *address_len) {
+                        struct sockaddr *address, socklen_t * /* unused */) {
   // if (address)
   //  return __real_recvfrom(fd, buffer, length, flags, address, address_len);
   // Hardly safe, but if it's non-NULL there's a chance
