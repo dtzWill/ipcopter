@@ -39,53 +39,55 @@ void copy_bufsizes(int src, int dst) {
 ssize_t do_ipc_send(int fd, const void *buf, size_t count, int flags) {
   ipc_info *i = getFDDesc(fd);
   assert(i->valid);
-  switch (i->state) {
-  case STATE_OPTIMIZED:
-    return __real_send(i->localfd, buf, count, flags);
-  default:
-    if ((i->bytes_trans += count) > TRANS_THRESHOLD) {
-      ipclog("send of %zu bytes crosses threshold for fd=%d\n", count, fd);
-#if 0
-    assert(fd == 4);
-    assert(i->ep == 1);
-    bool success = ipcd_localize(1, 2);
-    assert(success && "Failed to localize sadtimes");
-    i->local = true;
-    // TODO: Async!
-    i->localfd = ipcd_getlocalfd(i->ep);
 
-    copy_bufsizes(fd, i->localfd);
-#else
-      i->localfd = fd;
-      i->state = STATE_OPTIMIZED;
-#endif
+  int sendfd = fd;
+  if (i->state == STATE_OPTIMIZED)
+    sendfd = i->localfd;
+  assert(sendfd);
+
+  ssize_t ret = __real_send(sendfd, buf, count, flags);
+
+  if (i->state == STATE_UNOPT && ret != -1) {
+    // Successful operation, add to running total.
+    i->bytes_trans += ret;
+
+    if (i->bytes_trans > TRANS_THRESHOLD) {
+      ipclog("send of %zu bytes crosses threshold for fd=%d\n", ret, fd);
     }
-    return __real_send(fd, buf, count, flags);
+
+    // Fake localization of this for now:
+    i->localfd = fd;
+    i->state = STATE_OPTIMIZED;
   }
+
+  return ret;
 }
 
 ssize_t do_ipc_recv(int fd, void *buf, size_t count, int flags) {
   ipc_info *i = getFDDesc(fd);
   assert(i->valid);
-  switch (i->state) {
-  case STATE_OPTIMIZED:
-    return __real_recv(i->localfd, buf, count, flags);
-  default:
-    if ((i->bytes_trans += count) > TRANS_THRESHOLD) {
-      ipclog("recv of %zu bytes crosses threshold for fd=%d\n", count, fd);
-#if 0
-    i->local = true;
-    // TODO: Async!
-    i->localfd = ipcd_getlocalfd(i->ep);
 
-    copy_bufsizes(fd, i->localfd);
-#else
-      i->localfd = fd;
-      i->state = STATE_OPTIMIZED;
-#endif
+  int recvfd = fd;
+  if (i->state == STATE_OPTIMIZED)
+    recvfd = i->localfd;
+  assert(recvfd);
+
+  ssize_t ret = __real_recv(recvfd, buf, count, flags);
+
+  if (i->state == STATE_UNOPT && ret != -1) {
+    // Successful operation, add to running total.
+    i->bytes_trans += ret;
+
+    if (i->bytes_trans > TRANS_THRESHOLD) {
+      ipclog("recv of %zu bytes crosses threshold for fd=%d\n", ret, fd);
     }
-    return __real_recv(fd, buf, count, flags);
+
+    // Fake localization of this for now:
+    i->localfd = fd;
+    i->state = STATE_OPTIMIZED;
   }
+
+  return ret;
 }
 
 ssize_t do_ipc_sendto(int fd, const void *message, size_t length, int flags,
