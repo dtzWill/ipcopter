@@ -13,14 +13,13 @@ failures much easier)
 
 Quick instructions:
 
-1) Build libc6-dev container:
-  $ cd libc-dev
-  $ docker build -t wdtz/libc-dev .
-2) Build ipc-test container (builds other components of ipcopter):
-  $ cd ../ipc-test
+1) Ensure have various build requirements installed (Go, etc)
+1) Run build.sh script to rebuild components and construct testing container
+  $ cd ./ipc-test
   $ ./build.sh
 3) Launch a bash shell in the ipcopter-ized container you just made:
-  $ docker run -i -t wdtz/ipc-hook /bin/bash
+  $ docker run -i -t $USER/ipc-hook
+  Libraries presently log events into /tmp/ipc.$PID.log, fairly verbosely O:).
 
 
 Note:

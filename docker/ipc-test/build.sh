@@ -18,4 +18,7 @@ go test
 cp $IPCD_DIR/ipcd $DIR/
 
 cd $DIR
-docker build -t wdtz/ipc-hook .
+TAG=$USER/ipc-hook
+docker build -t $TAG .
+
+echo "Created ipcopter testing container: $TAG"
