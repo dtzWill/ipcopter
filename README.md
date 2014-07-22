@@ -5,15 +5,12 @@ IPC Optimization Research Implementation
 
 Contents:
 
-ipcd/
-  Trusted central manager daemon.
-
-libipc/
-  Shared library linked into applications (LD_PRELOAD)
-  that hooks network functionality so that communication
-  with local processes may be optimized.
-
-docker/
-  Scripts for building and injecting ipcopter into a testing container.
-  See README for more information.
+* ipcd/
+  * Trusted central manager daemon.
+* libipc/
+  * Shared library linked into applications (LD_PRELOAD)
+  * Hooks network functionality and coordinates with ipcd to optimize communication
+* docker/
+  * Scripts for building and injecting ipcopter into a testing container.
+  * See README for more information.
 
