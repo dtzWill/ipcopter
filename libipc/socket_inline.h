@@ -161,4 +161,22 @@ static inline int __internal_close(int fd) {
   return ret;
 }
 
+EXTERN_C int __real_shutdown(int sockfd, int how);
+static inline int __internal_shutdown(int sockfd, int how) {
+  if (FILE *logfp = getlogfp()) {
+    if (int logfd = fileno(logfp)) {
+      if (logfd == sockfd) {
+        ipclog("Attempt to shutdown our logging fd, ignoring!");
+        return 0;
+      }
+    }
+  }
+
+  // TODO: Hmm, what should be done here?
+
+  if (is_registered_socket(sockfd))
+    return do_ipc_shutdown(sockfd, how);
+  else
+    return __real_shutdown(sockfd, how);
+}
 #endif // _SOCKET_INLINE_H_
