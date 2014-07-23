@@ -52,51 +52,43 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
 
   // Otherwise, use original fd:
   ssize_t rem = (TRANS_THRESHOLD - i->bytes_trans);
-  char *bytes = (char *)(uintptr_t(buf));
   if (rem > 0 && size_t(rem) <= count) {
-    ipclog("Starting sync!\n");
-    while (rem > 0) {
-      ssize_t ret = IO(fd, bytes, rem, flags);
+    ssize_t ret = IO(fd, buf, rem, flags);
 
-      if (ret == -1) {
-        return ret;
-      }
-
-      count -= ret;
-      rem -= ret;
-      i->bytes_trans += ret;
-      bytes += ret;
+    if (ret == -1) {
+      return ret;
     }
+
+    i->bytes_trans += ret;
 
     if (i->bytes_trans == TRANS_THRESHOLD) {
       ipclog("Completed partial operation to sync at THRESHOLD for fd=%d!\n",
              fd);
+      // TODO: Async!
+      endpoint remote;
+      size_t attempts = 0;
+      while (((remote = ipcd_endpoint_kludge(i->ep)) == EP_INVALID) &&
+             ++attempts < MAX_SYNC_ATTEMPTS) {
+        sched_yield();
+      }
+
+      if (remote != EP_INVALID) {
+        ipclog("Found remote endpoint! Local=%d, Remote=%d Attempts=%zu!\n",
+               i->ep, remote, attempts);
+
+        bool success = ipcd_localize(i->ep, remote);
+        assert(success && "Failed to localize! Sadtimes! :(");
+        i->localfd = ipcd_getlocalfd(i->ep);
+        i->state = STATE_OPTIMIZED;
+
+        copy_bufsizes(fd, i->localfd);
+      }
     }
 
-    // TODO: Async!
-    endpoint remote;
-    size_t attempts = 0;
-    while (((remote = ipcd_endpoint_kludge(i->ep)) == EP_INVALID) &&
-           ++attempts < MAX_SYNC_ATTEMPTS) {
-      sched_yield();
-    }
-
-    if (remote != EP_INVALID) {
-      ipclog("Found remote endpoint! Local=%d, Remote=%d Attempts=%zu!\n", i->ep,
-             remote, attempts);
-
-      bool success = ipcd_localize(i->ep, remote);
-      assert(success && "Failed to localize! Sadtimes! :(");
-      i->localfd = ipcd_getlocalfd(i->ep);
-      i->state = STATE_OPTIMIZED;
-
-      copy_bufsizes(fd, i->localfd);
-    }
-
-    return uintptr_t(bytes) - uintptr_t(buf);
+    return ret;
   }
 
-  ssize_t ret = IO(fd, bytes, count, flags);
+  ssize_t ret = IO(fd, buf, count, flags);
 
   // We don't handle other states yet
   assert(i->state == STATE_UNOPT);
