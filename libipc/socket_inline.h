@@ -146,16 +146,18 @@ static inline int __internal_listen(int fd, int backlog) {
 
 EXTERN_C int __real_close(int fd);
 static inline int __internal_close(int fd) {
+  if (fd == -1) {
+    ipclog("close(-1)??\n");
+    return 0;
+  }
   if (is_protected_fd(fd)) {
     ipclog("Attempt to close protected fd '%d', ignoring", fd);
     return 0;
   }
   int ret = __real_close(fd);
-  if (fd == -1) {
-    ipclog("close(-1)??\n");
-  } else {
-    unregister_inet_socket(fd);
-  }
+
+  unregister_inet_socket(fd);
+
   return ret;
 }
 
