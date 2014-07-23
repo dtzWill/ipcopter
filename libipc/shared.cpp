@@ -57,6 +57,8 @@ int bind(int fd, const struct sockaddr *addr, socklen_t addrlen) {
 
 int close(int fd) { return __internal_close(fd); }
 
+void closefrom(int lowfd) { return __internal_closefrom(lowfd); }
+
 int connect(int fd, const struct sockaddr *addr, socklen_t addrlen) {
   return __internal_connect(fd, addr, addrlen);
 }

@@ -157,6 +157,22 @@ static inline int __internal_close(int fd) {
   return ret;
 }
 
+
+static inline void __internal_closefrom(int lowfd) {
+  // XXX
+  // Actual closefrom implementation looks
+  // at /proc/$PID/fd/ and just closes fd's it finds
+  // there larger than given value.
+  // It handles all kinds of other details as well...
+  // TODO: Improve our implementation!
+  // Misc useful reference impl:
+  // https://code.google.com/p/flowd/source/browse/closefrom.c?name=FLOWD_0_8_5
+  long maxfd = sysconf(_SC_OPEN_MAX);
+
+  for (long fd = lowfd; fd < maxfd; ++fd)
+    (void)close((int)fd);
+}
+
 EXTERN_C int __real_shutdown(int sockfd, int how);
 static inline int __internal_shutdown(int sockfd, int how) {
   if (FILE *logfp = getlogfp()) {
