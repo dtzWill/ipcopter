@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type LocalizedEP struct {
@@ -34,7 +35,8 @@ type IPCContext struct {
 	Lock   sync.Mutex
 	FreeID int
 	// Used for Endpoint sync kludge
-	WaitingEPI *EndPointInfo
+	WaitingEPI  *EndPointInfo
+	WaitingTime time.Time
 }
 
 func NewContext() *IPCContext {
@@ -205,6 +207,14 @@ func (C *IPCContext) pairkludge(ID int) (int, error) {
 
 	// Otherwise, is there a pair candidate waiting?
 	Waiting := C.WaitingEPI
+
+	if Waiting != nil {
+		if time.Since(C.WaitingTime) >= 100*time.Millisecond {
+			C.WaitingEPI = nil
+			Waiting = nil
+		}
+	}
+
 	if Waiting != nil && Waiting != EPI {
 		EPI.KludgePair = Waiting
 		Waiting.KludgePair = EPI
@@ -216,6 +226,7 @@ func (C *IPCContext) pairkludge(ID int) (int, error) {
 	// comes looking for this unpaired endpoint:
 
 	C.WaitingEPI = EPI
+	C.WaitingTime = time.Now()
 
 	return ID, nil
 }
