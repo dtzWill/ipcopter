@@ -199,7 +199,10 @@ static inline int __internal_shutdown(int sockfd, int how) {
 EXTERN_C int __real_fcntl(int fd, int cmd, void *arg);
 static inline int __internal_fcntl(int fd, int cmd, void *arg) {
   // TODO: do something
-  assert(!is_protected_fd(fd));
+  if (is_protected_fd(fd)) {
+    ipclog("Attempting fcntl(fd=%d, cmd=%d, arg=%p) for protected fd!\n",
+           fd, cmd, arg);
+  }
   int ret = __real_fcntl(fd, cmd, arg);
 
   return ret;

@@ -107,6 +107,9 @@ int getlocalfd(int fd) {
 }
 
 char is_protected_fd(int fd) {
+  if (!inbounds_fd(fd)) {
+    return false;
+  }
   // Logging fd is protected
   if (FILE *logfp = getlogfp())
     if (int logfd = fileno(logfp))
