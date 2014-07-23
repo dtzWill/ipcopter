@@ -144,13 +144,9 @@ static inline int __internal_listen(int fd, int backlog) {
 
 EXTERN_C int __real_close(int fd);
 static inline int __internal_close(int fd) {
-  if (FILE *logfp = getlogfp()) {
-    if (int logfd = fileno(logfp)) {
-      if (logfd == fd) {
-        ipclog("Attempt to close our logging fd, ignoring!");
-        return 0;
-      }
-    }
+  if (is_protected_fd(fd)) {
+    ipclog("Attempt to close protected fd '%d', ignoring", fd);
+    return 0;
   }
   int ret = __real_close(fd);
   if (fd == -1) {

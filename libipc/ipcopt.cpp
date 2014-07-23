@@ -24,6 +24,17 @@
 // TODO: This table is presently not used thread-safe at all!
 ipc_info IpcDescTable[TABLE_SIZE] = {};
 
+void invalidate(ipc_info *i) {
+  assert(i->valid);
+  // Mark as invalid
+  i->valid = false;
+  // And invalidate the data it contains for good measure
+  i->bytes_trans = 0;
+  i->localfd = 0;
+  i->ep = EP_INVALID;
+  i->state = STATE_UNOPT;
+}
+
 void register_inet_socket(int fd) {
   ipclog("Registering socket fd=%d\n", fd);
   ipc_info *i = getFDDesc(fd);
@@ -64,20 +75,49 @@ void unregister_inet_socket(int fd) {
     if (i->localfd) {
       assert(i->state == STATE_OPTIMIZED);
       __real_close(i->localfd);
+
+      // Remove entry for local fd
+      ipc_info *li = getFDDesc(i->localfd);
+      assert(li->state == STATE_LOCALFD);
+      invalidate(li);
     }
-    assert(i->valid);
-    // Mark table entry as invalid
-    i->valid = false;
-    // And invalidate the data it contains for good measure
-    i->bytes_trans = 0;
-    i->localfd = 0;
-    i->ep = EP_INVALID;
-    i->state = STATE_UNOPT;
+    invalidate(i);
   }
 }
 
-// TODO: Inline this
 char is_registered_socket(int fd) {
   ipc_info *i = getFDDesc(fd);
-  return i->valid;
+  return i->valid && (i->state != STATE_LOCALFD);
+}
+
+int getlocalfd(int fd) {
+  assert(is_registered_socket(fd));
+  int local = ipcd_getlocalfd(fd);
+
+  // Create entry in fd table indicating this
+  // fd is being used for optimized transport.
+  ipc_info *i = getFDDesc(local);
+  i->bytes_trans = 0;
+  i->localfd = 0;
+  i->ep = EP_INVALID;
+  i->state = STATE_LOCALFD;
+  i->valid = true;
+
+  return local;
+}
+
+char is_protected_fd(int fd) {
+  // Logging fd is protected
+  if (FILE *logfp = getlogfp())
+    if (int logfd = fileno(logfp))
+      if (logfd == fd)
+        return true;
+
+  // So are all local fd's:
+  ipc_info *i = getFDDesc(fd);
+  if (i->valid && i->state == STATE_LOCALFD)
+    return true;
+
+  // Everything else is unprotected
+  return false;
 }

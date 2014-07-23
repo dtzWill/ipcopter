@@ -26,6 +26,9 @@ void register_inet_socket(int fd);
 char is_registered_socket(int fd);
 void unregister_inet_socket(int fd);
 
+int getlocalfd(int fd);
+char is_protected_fd(int fd);
+
 // R/W operations using best available transport
 ssize_t do_ipc_send(int fd, const void *buf, size_t count, int flags);
 ssize_t do_ipc_recv(int fd, void *buf, size_t count, int flags);

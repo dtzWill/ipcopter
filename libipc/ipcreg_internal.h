@@ -22,6 +22,7 @@ typedef enum {
   STATE_UNOPT = 0,
   STATE_ID_EXCHANGE,
   STATE_OPTIMIZED,
+  STATE_LOCALFD
 } EndpointState;
 
 typedef struct {
