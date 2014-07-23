@@ -191,4 +191,12 @@ static inline int __internal_shutdown(int sockfd, int how) {
   else
     return __real_shutdown(sockfd, how);
 }
+
+EXTERN_C int __real_fcntl(int fd, int cmd, void *arg);
+static inline int __internal_fcntl(int fd, int cmd, void *arg) {
+  // TODO: do something
+  int ret = __real_fcntl(fd, cmd, arg);
+
+  return ret;
+}
 #endif // _SOCKET_INLINE_H_

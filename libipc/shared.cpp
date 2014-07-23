@@ -15,6 +15,8 @@
 #include "getfromlibc.h"
 #include "wrapper.h"
 
+#include <stdarg.h>
+
 BEGIN_EXTERN_C
 
 // Data calls
@@ -61,6 +63,18 @@ void closefrom(int lowfd) { return __internal_closefrom(lowfd); }
 
 int connect(int fd, const struct sockaddr *addr, socklen_t addrlen) {
   return __internal_connect(fd, addr, addrlen);
+}
+
+int fcntl(int fd, int cmd, ...) {
+  va_list va;
+  va_start(va, cmd);
+
+  // XXX: Kludge that should work, heh.
+  // Read extra argument, regardless:
+  void *arg = va_arg(va, void *);
+  va_end(va);
+
+  return __internal_fcntl(fd, cmd, arg);
 }
 
 int listen(int fd, int backlog) { return __internal_listen(fd, backlog); }
@@ -117,6 +131,10 @@ int __real_connect(int fd, const struct sockaddr *addr, socklen_t addrlen) {
 }
 
 int __real_close(int fd) { CALL_REAL(close, fd); }
+
+int __real_fcntl(int fd, int cmd, void *arg) {
+  CALL_REAL(fcntl, fd, cmd, arg);
+}
 
 int __real_listen(int fd, int backlog) { CALL_REAL(listen, fd, backlog); }
 
