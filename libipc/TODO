@@ -1,0 +1,10 @@
+* More hooks: 
+  * getsockopt/setsockopt
+  * fcntl
+  * ioctl
+  * getsockname/getpeername
+  * select/poll
+  * dup2
+  * exec family
+* Better handling of signals?
+  * What if ALARM occurs while connceting to ipcd or something?
