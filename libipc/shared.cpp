@@ -65,6 +65,10 @@ int connect(int fd, const struct sockaddr *addr, socklen_t addrlen) {
   return __internal_connect(fd, addr, addrlen);
 }
 
+int dup(int fd) { return __internal_dup(fd); }
+
+int dup2(int fd1, int fd2) { return __internal_dup2(fd1, fd2); }
+
 int fcntl(int fd, int cmd, ...) {
   va_list va;
   va_start(va, cmd);
@@ -117,7 +121,6 @@ ssize_t __real_write(int fd, const void *buf, size_t count) {
 
 // Control
 
-
 int __real_accept(int fd, struct sockaddr *addr, socklen_t *addrlen) {
   CALL_REAL(accept, fd, addr, addrlen);
 }
@@ -132,9 +135,11 @@ int __real_connect(int fd, const struct sockaddr *addr, socklen_t addrlen) {
 
 int __real_close(int fd) { CALL_REAL(close, fd); }
 
-int __real_fcntl(int fd, int cmd, void *arg) {
-  CALL_REAL(fcntl, fd, cmd, arg);
-}
+int __real_dup(int fd) { CALL_REAL(dup, fd); }
+
+int __real_dup2(int fd1, int fd2) { CALL_REAL(dup2, fd1, fd2); }
+
+int __real_fcntl(int fd, int cmd, void *arg) { CALL_REAL(fcntl, fd, cmd, arg); }
 
 int __real_listen(int fd, int backlog) { CALL_REAL(listen, fd, backlog); }
 

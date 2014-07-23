@@ -207,4 +207,23 @@ static inline int __internal_fcntl(int fd, int cmd, void *arg) {
 
   return ret;
 }
+
+EXTERN_C int __real_dup(int fd);
+static inline int __internal_dup(int fd) {
+  int ret = __real_dup(fd);
+  
+  // TODO: Track dup'd fd!
+
+  return ret;
+}
+EXTERN_C int __real_dup2(int fd1, int fd2);
+static inline int __internal_dup2(int fd1, int fd2) {
+
+  int ret = __real_dup2(fd1, fd2);
+
+  // TODO: Check if fd2 is protected
+  // TODO: Track that fd2 and fd are now same
+
+  return ret;
+}
 #endif // _SOCKET_INLINE_H_
