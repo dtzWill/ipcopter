@@ -41,6 +41,10 @@ extern ipc_info IpcDescTable[TABLE_SIZE];
 static inline char inbounds_fd(int fd) { return (unsigned)fd <= TABLE_SIZE; }
 
 static inline ipc_info *getFDDesc(int fd) {
+  if (!inbounds_fd(fd)) {
+    ipclog("Attempt to access out-of-bounds fd: %d (TABLE_SIZE=%u)\n", fd,
+           TABLE_SIZE);
+  }
   assert(inbounds_fd(fd));
   return &IpcDescTable[fd];
 }
