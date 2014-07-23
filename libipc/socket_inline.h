@@ -152,7 +152,7 @@ static inline int __internal_close(int fd) {
     return 0;
   }
   if (is_protected_fd(fd)) {
-    ipclog("Attempt to close protected fd '%d', ignoring", fd);
+    ipclog("Attempt to close protected fd '%d', ignoring\n", fd);
     return 0;
   }
   int ret = __real_close(fd);
@@ -183,7 +183,7 @@ static inline int __internal_shutdown(int sockfd, int how) {
   if (FILE *logfp = getlogfp()) {
     if (int logfd = fileno(logfp)) {
       if (logfd == sockfd) {
-        ipclog("Attempt to shutdown our logging fd, ignoring!");
+        ipclog("Attempt to shutdown our logging fd, ignoring!\n");
         return 0;
       }
     }
