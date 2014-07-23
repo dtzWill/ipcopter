@@ -151,7 +151,7 @@ void connect_if_needed() {
 }
 
 endpoint ipcd_register_socket(int fd) {
-  IPCLock();
+  IPCLock L;
   connect_if_needed();
 
   char buf[100];
@@ -181,7 +181,7 @@ endpoint ipcd_register_socket(int fd) {
 }
 
 bool ipcd_localize(endpoint local, endpoint remote) {
-  IPCLock();
+  IPCLock L;
   connect_if_needed();
 
   char buf[100];
@@ -200,7 +200,7 @@ bool ipcd_localize(endpoint local, endpoint remote) {
 
 // GETLOCALFD
 int ipcd_getlocalfd(endpoint local) {
-  IPCLock();
+  IPCLock L;
   connect_if_needed();
 
   char buf[100];
@@ -254,7 +254,7 @@ int ipcd_getlocalfd(endpoint local) {
 
 // UNREGISTER
 bool ipcd_unregister_socket(endpoint ep) {
-  IPCLock();
+  IPCLock L;
   connect_if_needed();
 
   char buf[100];
@@ -271,3 +271,28 @@ bool ipcd_unregister_socket(endpoint ep) {
   return strncmp(buf, "200 OK\n", err) == 0;
 }
 
+endpoint ipcd_endpoint_kludge(endpoint local) {
+  IPCLock L;
+  connect_if_needed();
+
+  char buf[100];
+  int len = sprintf(buf, "ENDPOINT_KLUDGE %d\n", local);
+  assert(len > 5);
+  int err = __real_write(ipcd_socket, buf, len);
+  if (err < 0) {
+    perror("write");
+    exit(1);
+  }
+  err = __real_read(ipcd_socket, buf, 50);
+  assert(err > 5);
+
+  buf[err] = 0;
+  int id;
+  ipclog("endpoint_kludge(%d) = %s\n", local, buf);
+  int n = sscanf(buf, "200 PAIR %d\n", &id);
+  if (n == 1) {
+    return id;
+  }
+
+  return EP_INVALID;
+}

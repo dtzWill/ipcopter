@@ -19,8 +19,10 @@
 #include "ipcd.h"
 
 #include <cassert>
+#include <sched.h>
 
 const size_t TRANS_THRESHOLD = 1ULL << 20;
+const size_t MAX_SYNC_ATTEMPTS = 5;
 
 void copy_bufsize(int src, int dst, int buftype) {
   int bufsize;
@@ -51,7 +53,8 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
   // Otherwise, use original fd:
   ssize_t rem = (TRANS_THRESHOLD - i->bytes_trans);
   char *bytes = (char *)(uintptr_t(buf));
-  if (rem > 0 && size_t(rem) < count) {
+  if (rem > 0 && size_t(rem) <= count) {
+    ipclog("Starting sync!\n");
     while (rem > 0) {
       ssize_t ret = IO(fd, bytes, rem, flags);
 
@@ -66,8 +69,31 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
     }
 
     if (i->bytes_trans == TRANS_THRESHOLD) {
-      ipclog("Completed partial operation to sync at THRESHOLD!\n");
+      ipclog("Completed partial operation to sync at THRESHOLD for fd=%d!\n",
+             fd);
     }
+
+    // TODO: Async!
+    endpoint remote;
+    size_t attempts = 0;
+    while (((remote = ipcd_endpoint_kludge(i->ep)) == EP_INVALID) &&
+           ++attempts < MAX_SYNC_ATTEMPTS) {
+      sched_yield();
+    }
+
+    if (remote != EP_INVALID) {
+      ipclog("Found remote endpoint! Local=%d, Remote=%d Attempts=%zu!\n", i->ep,
+             remote, attempts);
+
+      bool success = ipcd_localize(i->ep, remote);
+      assert(success && "Failed to localize! Sadtimes! :(");
+      i->localfd = ipcd_getlocalfd(i->ep);
+      i->state = STATE_OPTIMIZED;
+
+      copy_bufsizes(fd, i->localfd);
+    }
+
+    return uintptr_t(bytes) - uintptr_t(buf);
   }
 
   ssize_t ret = IO(fd, bytes, count, flags);
@@ -80,14 +106,6 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
 
   // Successful operation, add to running total.
   i->bytes_trans += ret;
-
-  if (i->bytes_trans > TRANS_THRESHOLD) {
-    ipclog("IO of %zu bytes crosses threshold for fd=%d\n", i->bytes_trans, fd);
-
-    // Fake localization of this for now:
-    i->localfd = fd;
-    i->state = STATE_OPTIMIZED;
-  }
 
   return ret;
 }

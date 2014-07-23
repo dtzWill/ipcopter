@@ -32,4 +32,7 @@ int ipcd_getlocalfd(endpoint local);
 // UNREGISTER
 bool ipcd_unregister_socket(endpoint ep);
 
+// ENDPOINT_KLUDGE
+endpoint ipcd_endpoint_kludge(endpoint local);
+
 #endif // _IPCD_H_
