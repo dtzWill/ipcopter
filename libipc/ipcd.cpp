@@ -295,3 +295,7 @@ endpoint ipcd_endpoint_kludge(endpoint local) {
 
   return EP_INVALID;
 }
+
+bool ipcd_is_protected(int fd) {
+  return fd == ipcd_socket;
+}

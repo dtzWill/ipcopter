@@ -35,4 +35,7 @@ bool ipcd_unregister_socket(endpoint ep);
 // ENDPOINT_KLUDGE
 endpoint ipcd_endpoint_kludge(endpoint local);
 
+// Does ipcd need the specified fd?
+bool ipcd_is_protected(int fd);
+
 #endif // _IPCD_H_

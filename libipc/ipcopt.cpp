@@ -118,6 +118,10 @@ char is_protected_fd(int fd) {
   if (i->valid && i->state == STATE_LOCALFD)
     return true;
 
+  // Check for ipcd protected sockets:
+  if (ipcd_is_protected(fd))
+    return true;
+
   // Everything else is unprotected
   return false;
 }
