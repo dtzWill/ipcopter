@@ -14,7 +14,7 @@ RUN apt-get update
 RUN apt-get install -y strace psmisc vim
 
 # TCP benchmark for testing purposes:
-RUN apt-get install -y netperf
+RUN apt-get install -y netperf iperf
 
 # Inject latest versions of the library and daemon:
 ADD tmp/libipc.so /lib/
