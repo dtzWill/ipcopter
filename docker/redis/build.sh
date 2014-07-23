@@ -1,5 +1,5 @@
 #!/bin/bash
 
-NAME=hook
+NAME=redis
 
 . ../build.inc
