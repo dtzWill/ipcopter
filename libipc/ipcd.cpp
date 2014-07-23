@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stropts.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -239,7 +238,7 @@ int ipcd_getlocalfd(endpoint local) {
 
     // TODO: Understand and fix mismatch between
     // CONTROLLEN and msg.msg_controllen after recvmsg()!
-    fd = *(int *)CMSG_DATA(cmsg);
+    memcpy(&fd, CMSG_DATA(cmsg), sizeof(int));
     ipclog("received local fd %d for endpoint %d\n", fd, local);
   }
 
