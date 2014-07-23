@@ -219,6 +219,9 @@ static inline int __internal_dup(int fd) {
 }
 EXTERN_C int __real_dup2(int fd1, int fd2);
 static inline int __internal_dup2(int fd1, int fd2) {
+  if (false)
+    ipclog("dup2(%d (%d) -> %d (%d) )\n", fd1, is_protected_fd(fd1), fd2,
+           is_protected_fd(fd2));
   assert(!is_protected_fd(fd1) && "Application attempted to dup protected fd");
   if (is_protected_fd(fd2)) {
     ipclog("Attempting dup2(src=%d, dst=%d), dst fd is protected\n", fd1, fd2);
