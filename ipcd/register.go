@@ -146,6 +146,10 @@ func (C *IPCContext) unregister(ID int) error {
 		EPI.Info.B.LocalFD.Close()
 	}
 
+	if C.WaitingEPI == EPI {
+		C.WaitingEPI = nil
+	}
+
 	return nil
 }
 
@@ -176,6 +180,10 @@ func (C *IPCContext) removeall(PID int) int {
 			EPI.Info.B.LocalFD.Close()
 		}
 		delete(C.IDMap, EPI.EP)
+
+		if C.WaitingEPI == EPI {
+			C.WaitingEPI = nil
+		}
 	}
 
 	return count
