@@ -32,6 +32,9 @@ int ipcd_getlocalfd(endpoint local);
 // UNREGISTER
 bool ipcd_unregister_socket(endpoint ep);
 
+// REREGISTER
+bool ipcd_reregister_socket(int fd, endpoint ep);
+
 // ENDPOINT_KLUDGE
 endpoint ipcd_endpoint_kludge(endpoint local);
 

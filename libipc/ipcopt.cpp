@@ -128,3 +128,19 @@ char is_protected_fd(int fd) {
   // Everything else is unprotected
   return false;
 }
+
+void register_inherited_fds() {
+  // We just forked, bump ref count
+  // on the fd's we inherited.
+
+  for (unsigned fd = 0; fd < TABLE_SIZE; ++fd) {
+    ipc_info *i = getFDDesc(fd);
+    if (is_registered_socket(fd)) {
+      bool ret = ipcd_reregister_socket(i->ep, fd);
+      if (!ret) {
+        ipclog("Failed to reregister endpoint '%d' for inherited fd '%d'\n",
+               i->ep, fd);
+      }
+    }
+  }
+}

@@ -27,6 +27,7 @@ char is_registered_socket(int fd);
 void unregister_inet_socket(int fd);
 
 int getlocalfd(int fd);
+void register_inherited_fds();
 char is_protected_fd(int fd);
 
 // R/W operations using best available transport

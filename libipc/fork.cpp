@@ -13,6 +13,8 @@
 
 #include <unistd.h>
 
+#include "ipcopt.h"
+
 #include "getfromlibc.h"
 #include "wrapper.h"
 #include "debug.h"
@@ -29,11 +31,8 @@ pid_t fork(void) {
     break;
   case 0:
     // child
-    // TODO: If parent close()'s any fd's we inherit
-    // (common pattern in servers) it will attempt to unregister
-    // the endpoints from the server.
-    // We need a way to handle this, perhaps ref counting?
     ipclog("FORK! Parent is: %d\n", getppid());
+    register_inherited_fds();
     break;
   default:
     // parent

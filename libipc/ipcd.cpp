@@ -270,6 +270,25 @@ bool ipcd_unregister_socket(endpoint ep) {
   return strncmp(buf, "200 OK\n", err) == 0;
 }
 
+// REREGISTER
+bool ipcd_reregister_socket(int fd, endpoint ep) {
+  IPCLock L;
+  connect_if_needed();
+
+  char buf[100];
+  int len = sprintf(buf, "REREGISTER %d %d %d\n", ep, getpid(), fd);
+  assert(len > 5);
+  int err = __real_write(ipcd_socket, buf, len);
+  if (err < 0) {
+    perror("write");
+    exit(1);
+  }
+  err = __real_read(ipcd_socket, buf, 50);
+  assert(err > 5);
+
+  return strncmp(buf, "200 OK\n", err) == 0;
+}
+
 endpoint ipcd_endpoint_kludge(endpoint local) {
   IPCLock L;
   connect_if_needed();
