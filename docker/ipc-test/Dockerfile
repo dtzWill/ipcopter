@@ -26,7 +26,7 @@ RUN sed --in-place=.bak 's/without-password/yes/' /etc/ssh/sshd_config
 RUN mkdir -p /var/run/sshd
 
 # More software
-RUN apt-get install -y netcat
+RUN apt-get install -y pv netcat
 
 # Inject latest versions of the library and daemon:
 ADD tmp/libipc.so /lib/
