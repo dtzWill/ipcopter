@@ -48,7 +48,12 @@ FILE *getlogfp() {
   sprintf(buf, pid_template, newmypid);
 
   logfp = fopen(buf, "w");
-  assert(logfp);
+
+  // If unable to open log, attempt to print to stderr and bail
+  if (!logfp) {
+    fprintf(stderr, "Error opening log file!");
+    abort();
+  }
 
   mypid = newmypid;
 
