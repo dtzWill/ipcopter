@@ -271,7 +271,7 @@ bool ipcd_unregister_socket(endpoint ep) {
 }
 
 // REREGISTER
-bool ipcd_reregister_socket(int fd, endpoint ep) {
+bool ipcd_reregister_socket(endpoint ep, int fd) {
   IPCLock L;
   connect_if_needed();
 
