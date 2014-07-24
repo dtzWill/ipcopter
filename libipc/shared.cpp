@@ -25,6 +25,11 @@ ssize_t read(int fd, void *buf, size_t count) {
   return __internal_read(fd, buf, count);
 }
 
+ssize_t __read_chk(int fd, void *buf, size_t count, size_t /* buflen */) {
+  // TODO: Implement checked version!
+  return __internal_read(fd, buf, count);
+}
+
 ssize_t recv(int fd, void *buf, size_t count, int flags) {
   return __internal_recv(fd, buf, count, flags);
 }
