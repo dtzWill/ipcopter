@@ -14,6 +14,8 @@ ADD tmp/libipc.so /lib/
 ADD tmp/ipcd /bin/
 
 # Ask dynamic linker to preload libipc.so into everything!
+RUN chmod 555 /bin/ipcd /lib/libipc.so
+RUN chmod 777 /tmp
 RUN echo "/lib/libipc.so" >> /etc/ld.so.preload
 
 CMD /bin/bash

@@ -15,6 +15,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static int mypid = 0;
@@ -47,15 +48,24 @@ FILE *getlogfp() {
 
   sprintf(buf, pid_template, newmypid);
 
-  logfp = fopen(buf, "w");
+  logfp = fopen(buf, "a");
 
   // If unable to open log, attempt to print to stderr and bail
   if (!logfp) {
     fprintf(stderr, "Error opening log file!");
     abort();
   }
+  fprintf(logfp, "Log file opened, pid=%d, oldpid=%d\n", newmypid, mypid);
 
   mypid = newmypid;
+
+  // Ensure we can still access this log even if
+  // we change user or drop rights.
+  int err = chmod(buf,0777);
+  if (err) {
+    fprintf(stderr, "Error setting log permissions");
+    abort();
+  }
 
   return logfp;
 }
