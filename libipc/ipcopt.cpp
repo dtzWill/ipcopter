@@ -90,6 +90,14 @@ char is_registered_socket(int fd) {
   return i->valid && (i->state != STATE_LOCALFD);
 }
 
+char is_optimized_socket_safe(int fd) {
+  if (!inbounds_fd(fd))
+    return false;
+
+  ipc_info *i = getFDDesc(fd);
+  return i->valid && (i->state == STATE_OPTIMIZED);
+}
+
 int getlocalfd(int fd) {
   assert(is_registered_socket(fd));
   int local = ipcd_getlocalfd(getFDDesc(fd)->ep);

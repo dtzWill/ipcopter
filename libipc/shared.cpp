@@ -94,6 +94,11 @@ int listen(int fd, int backlog) { return __internal_listen(fd, backlog); }
 int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
   return __internal_poll(fds, nfds, timeout);
 }
+int __poll_chk(struct pollfd fds[], nfds_t nfds, int timeout,
+               size_t /* fdslen */) {
+  // TODO: Support checking!
+  return __internal_poll(fds, nfds, timeout);
+}
 
 int pselect(int nfds, fd_set *RESTRICT readfds, fd_set *RESTRICT writefds,
             fd_set *RESTRICT errorfds, const struct timespec *RESTRICT timeout,

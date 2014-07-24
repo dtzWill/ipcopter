@@ -18,12 +18,14 @@
 extern "C" {
 #endif
 
+#include <poll.h>
 #include <stdint.h>
 #include <unistd.h>
 
 // FD registration
 void register_inet_socket(int fd);
 char is_registered_socket(int fd);
+char is_optimized_socket_safe(int fd);
 void unregister_inet_socket(int fd);
 
 int getlocalfd(int fd);
@@ -38,6 +40,8 @@ ssize_t do_ipc_sendto(int fd, const void *message, size_t length, int flags,
 ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
                         struct sockaddr *address, socklen_t *address_len);
 
+
+int do_ipc_poll(struct pollfd fds[], nfds_t nfds, int timeout);
 
 int do_ipc_shutdown(int sockfd, int how);
 

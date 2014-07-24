@@ -24,11 +24,12 @@
 #include <linux/ip.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <poll.h>
 
 #ifdef __cplusplus
 #define EXTERN_C extern "C"
@@ -245,6 +246,16 @@ static inline int __internal_dup2(int fd1, int fd2) {
 EXTERN_C int __real_poll(struct pollfd fds[], nfds_t nfds, int timeout);
 static inline int __internal_poll(struct pollfd fds[], nfds_t nfds,
                                   int timeout) {
+  bool use_internal = false;
+  for (nfds_t i = 0; i < nfds; ++i) {
+    if (is_optimized_socket_safe(fds[i].fd)) {
+      use_internal = true;
+      break;
+    }
+  }
+
+  if (use_internal)
+    return do_ipc_poll(fds, nfds, timeout);
   return __real_poll(fds, nfds, timeout);
 }
 
