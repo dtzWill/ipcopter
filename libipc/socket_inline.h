@@ -36,7 +36,12 @@
 EXTERN_C int __real_socket(int domain, int type, int protocol);
 static inline int __internal_socket(int domain, int type, int protocol) {
   int fd = __real_socket(domain, type, protocol);
-  if (domain == AF_INET && type == SOCK_STREAM && fd != -1) {
+
+  bool ip_domain = (domain == AF_INET) || (domain == AF_INET6);
+  bool stream_sock = (type & SOCK_STREAM) != 0;
+  bool tcp = ip_domain && stream_sock;
+  bool valid_fd = (fd != -1);
+  if (tcp && valid_fd) {
     register_inet_socket(fd);
   }
   return fd;
