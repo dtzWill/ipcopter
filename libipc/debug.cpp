@@ -59,13 +59,13 @@ FILE *getlogfp() {
 
   mypid = newmypid;
 
-  // Ensure we can still access this log even if
-  // we change user or drop rights.
-  int err = chmod(buf,0777);
-  if (err) {
-    fprintf(stderr, "Error setting log permissions");
-    abort();
-  }
+  // Try to ensure we can still access this log,
+  // even if we change user or drop rights.
+  chmod(buf,0777);
+  // Ignore possible errors here for now, since the exact
+  // case we're trying to enable makes us unable to set
+  // permissions when re-opening the log file.
+  // Good enough for now O:).
 
   return logfp;
 }
