@@ -15,9 +15,12 @@
 #include "getfromlibc.h"
 #include "wrapper.h"
 
+#include <poll.h>
 #include <stdarg.h>
 
 BEGIN_EXTERN_C
+
+#define RESTRICT
 
 // Data calls
 
@@ -88,6 +91,22 @@ int fcntl(int fd, int cmd, ...) {
 
 int listen(int fd, int backlog) { return __internal_listen(fd, backlog); }
 
+int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
+  return __internal_poll(fds, nfds, timeout);
+}
+
+int pselect(int nfds, fd_set *RESTRICT readfds, fd_set *RESTRICT writefds,
+            fd_set *RESTRICT errorfds, const struct timespec *RESTRICT timeout,
+            const sigset_t *RESTRICT sigmask) {
+  return __internal_pselect(nfds, readfds, writefds, errorfds, timeout,
+                            sigmask);
+}
+
+int select(int nfds, fd_set *RESTRICT readfds, fd_set *RESTRICT writefds,
+           fd_set *RESTRICT errorfds, struct timeval *RESTRICT timeout) {
+  return __internal_select(nfds, readfds, writefds, errorfds, timeout);
+}
+
 int shutdown(int sockfd, int how) { return __internal_shutdown(sockfd, how); }
 
 int socket(int domain, int type, int protocol) {
@@ -147,6 +166,22 @@ int __real_dup2(int fd1, int fd2) { CALL_REAL(dup2, fd1, fd2); }
 int __real_fcntl(int fd, int cmd, void *arg) { CALL_REAL(fcntl, fd, cmd, arg); }
 
 int __real_listen(int fd, int backlog) { CALL_REAL(listen, fd, backlog); }
+
+int __real_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
+  CALL_REAL(poll, fds, nfds, timeout);
+}
+
+int __real_pselect(int nfds, fd_set *RESTRICT readfds,
+                   fd_set *RESTRICT writefds, fd_set *RESTRICT errorfds,
+                   const struct timespec *RESTRICT timeout,
+                   const sigset_t *RESTRICT sigmask) {
+  CALL_REAL(pselect, nfds, readfds, writefds, errorfds, timeout, sigmask);
+}
+
+int __real_select(int nfds, fd_set *RESTRICT readfds, fd_set *RESTRICT writefds,
+                  fd_set *RESTRICT errorfds, struct timeval *RESTRICT timeout) {
+  CALL_REAL(select, nfds, readfds, writefds, errorfds, timeout);
+}
 
 int __real_shutdown(int sockfd, int how) { CALL_REAL(shutdown, sockfd, how); }
 

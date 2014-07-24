@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <poll.h>
 
 #ifdef __cplusplus
 #define EXTERN_C extern "C"
@@ -239,5 +240,26 @@ static inline int __internal_dup2(int fd1, int fd2) {
   // TODO: Track that fd2 and fd are now same
 
   return ret;
+}
+
+EXTERN_C int __real_poll(struct pollfd fds[], nfds_t nfds, int timeout);
+static inline int __internal_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
+  return __real_poll(fds, nfds, timeout);
+}
+
+EXTERN_C int __real_pselect(int nfds, fd_set *readfds, fd_set *writefds,
+                            fd_set *errorfds, const struct timespec *timeout,
+                            const sigset_t *sigmask);
+static inline int __internal_pselect(int nfds, fd_set *readfds, fd_set *writefds,
+                       fd_set *errorfds, const struct timespec *timeout,
+                       const sigset_t *sigmask) {
+  return __real_pselect(nfds, readfds, writefds, errorfds, timeout, sigmask);
+}
+
+EXTERN_C int __real_select(int nfds, fd_set *readfds, fd_set *writefds,
+                           fd_set *errorfds, struct timeval *timeout);
+static inline int __internal_select(int nfds, fd_set *readfds, fd_set *writefds,
+                      fd_set *errorfds, struct timeval *timeout) {
+  return __real_select(nfds, readfds, writefds, errorfds, timeout);
 }
 #endif // _SOCKET_INLINE_H_
