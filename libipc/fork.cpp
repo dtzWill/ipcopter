@@ -23,6 +23,12 @@ BEGIN_EXTERN_C
 pid_t __real_fork(void) { CALL_REAL(fork); }
 
 pid_t fork(void) {
+
+  // Re-registered all fd's before
+  // passing to children.
+  // This is bad, but makes it easy to avoid
+  // racing child's reregistration against our closing them.
+  register_inherited_fds();
   pid_t p = __real_fork();
 
   switch (p) {
@@ -32,7 +38,6 @@ pid_t fork(void) {
   case 0:
     // child
     ipclog("FORK! Parent is: %d\n", getppid());
-    register_inherited_fds();
     break;
   default:
     // parent
