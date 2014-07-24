@@ -48,6 +48,11 @@ func listenForClients(C *IPCContext) {
 		panic(err)
 	}
 
+	err = os.Chmod(SOCKET_PATH, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
