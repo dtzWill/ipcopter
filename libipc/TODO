@@ -5,6 +5,21 @@
   * getsockname/getpeername
   * select/poll
   * dup2
-  * exec family
 * Better handling of signals?
   * What if ALARM occurs while connceting to ipcd or something?
+* exec handling
+	* exec() will clear out our state!
+* fork() handling
+	* Common pattern is to accept client connections
+		(generating new fd for client), fork()'ing a new
+		child process to handle it (fd inherited to child),
+		and closing it in the parent.  Unfortunately closing
+		presently unregisters the endpoint ID we have,
+		which is a problem since child thinks it is still
+		a registered endpoint.
+		* Track set of processes with fd open still?
+			* ref-counting likely sufficient, but
+			  tracking set might be easier to debug failures.
+		* Similar problem to dup2() within same process,
+		  especially considering treatment of close()
+			on the descriptor.
