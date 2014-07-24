@@ -254,3 +254,26 @@ func TestEndpointKludge(t *testing.T) {
 
 	CheckReq("LOCALIZE 0 1\n", "200 OK", t)
 }
+
+func TestReregister(t *testing.T) {
+	P := StartServerProcess()
+	defer P.Kill()
+
+	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
+	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
+	CheckReq("REGISTER 1 20\n", "200 ID 2", t)
+
+	// oops we "fork()'d"
+	CheckReq("REREGISTER 0 2 10\n", "200 OK", t)
+	CheckReq("REREGISTER 3 2 15\n", "303 Invalid Endpoint ID '3'", t)
+
+	// Single ref
+	CheckReq("UNREGISTER 1\n", "200 OK", t)
+
+	// Two refs, reduce to one
+	CheckReq("UNREGISTER 0\n", "200 OK", t)
+	// Reduce to none
+	CheckReq("UNREGISTER 0\n", "200 OK", t)
+	// Error
+	CheckReq("UNREGISTER 0\n", "303 Invalid Endpoint ID '0'", t)
+}

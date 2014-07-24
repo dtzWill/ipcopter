@@ -215,6 +215,36 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 			return "NOPAIR", nil
 		}
 		return fmt.Sprintf("PAIR %d", Pair), nil
+	case "REREGISTER":
+		// REREGISTER EP PID FD
+		// TODO: Actually do something with PID/FD.
+		// (Esp useful when start checking caller's creds!)
+		// TODO: Consider requiring sender specifies the pid/fd of the original for verification.
+		if len(spaceDelimTokens) < 4 {
+			RErr = InsufficientArgsErr()
+			return
+		}
+		EP, err := strconv.Atoi(spaceDelimTokens[1])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		PID, err := strconv.Atoi(spaceDelimTokens[1])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		FD, err := strconv.Atoi(spaceDelimTokens[1])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+
+		err = Ctxt.reregister(EP, PID, FD)
+		if err != nil {
+			RErr = UnknownErr(err.Error())
+			return
+		}
 	default:
 		RErr = &ReqError{REQ_ERR_UNRECOGNIZED_CMD, "Unrecognized command"}
 		return

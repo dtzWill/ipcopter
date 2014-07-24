@@ -27,6 +27,7 @@ type EndPointInfo struct {
 	EP         EndPoint
 	Info       *LocalInfo
 	KludgePair *EndPointInfo
+	RefCount   int
 }
 
 type IPCContext struct {
@@ -50,7 +51,7 @@ func (C *IPCContext) register(PID, FD int) (int, error) {
 	C.Lock.Lock()
 	defer C.Lock.Unlock()
 
-	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */}
+	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 1 /* refcnt */}
 	if _, exist := C.IDMap[EPI.EP]; exist {
 		return 0, errors.New("Duplicate registration!")
 	}
@@ -137,6 +138,12 @@ func (C *IPCContext) unregister(ID int) error {
 		return errors.New(fmt.Sprintf("Invalid Endpoint ID '%d'", ID))
 	}
 
+	EPI.RefCount--
+	if EPI.RefCount > 0 {
+		// More references, leave it registered
+		return nil
+	}
+
 	// Remove enties from map
 	delete(C.IDMap, EPI.EP)
 	delete(C.EPMap, ID)
@@ -164,6 +171,9 @@ func (C *IPCContext) removeall(PID int) int {
 	RemoveIDs := []int{}
 	RemoveEPIs := []*EndPointInfo{}
 
+	// TODO: reregistration means an endpoint could
+	// have multiple owning processes, handle this!
+	// This all really needs a do-over! O:)
 	for k, v := range C.EPMap {
 		if v.EP.PID == PID {
 			RemoveIDs = append(RemoveIDs, k)
@@ -229,4 +239,18 @@ func (C *IPCContext) pairkludge(ID int) (int, error) {
 	C.WaitingTime = time.Now()
 
 	return ID, nil
+}
+
+func (C *IPCContext) reregister(ID, PID, FD int) error {
+	C.Lock.Lock()
+	defer C.Lock.Unlock()
+
+	EPI, exist := C.EPMap[ID]
+	if !exist {
+		return errors.New(fmt.Sprintf("Invalid Endpoint ID '%d'", ID))
+	}
+
+	EPI.RefCount++
+
+	return nil
 }
