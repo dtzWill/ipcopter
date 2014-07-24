@@ -25,6 +25,9 @@ RUN sed --in-place=.bak 's/without-password/yes/' /etc/ssh/sshd_config
 # ssh needs this directory
 RUN mkdir -p /var/run/sshd
 
+# More software
+RUN apt-get install -y netcat
+
 # Inject latest versions of the library and daemon:
 ADD tmp/libipc.so /lib/
 ADD tmp/ipcd /bin/
