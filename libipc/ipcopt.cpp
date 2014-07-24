@@ -92,7 +92,7 @@ char is_registered_socket(int fd) {
 
 int getlocalfd(int fd) {
   assert(is_registered_socket(fd));
-  int local = ipcd_getlocalfd(fd);
+  int local = ipcd_getlocalfd(getFDDesc(fd)->ep);
 
   // Create entry in fd table indicating this
   // fd is being used for optimized transport.

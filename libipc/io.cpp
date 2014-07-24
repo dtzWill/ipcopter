@@ -78,7 +78,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
 
         bool success = ipcd_localize(i->ep, remote);
         assert(success && "Failed to localize! Sadtimes! :(");
-        i->localfd = getlocalfd(i->ep);
+        i->localfd = getlocalfd(fd);
         i->state = STATE_OPTIMIZED;
 
         copy_bufsizes(fd, i->localfd);
