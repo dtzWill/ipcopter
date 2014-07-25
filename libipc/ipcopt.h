@@ -21,6 +21,7 @@ extern "C" {
 #include <poll.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <sys/select.h>
 
 // FD registration
 void register_inet_socket(int fd);
@@ -40,8 +41,12 @@ ssize_t do_ipc_sendto(int fd, const void *message, size_t length, int flags,
 ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
                         struct sockaddr *address, socklen_t *address_len);
 
-
 int do_ipc_poll(struct pollfd fds[], nfds_t nfds, int timeout);
+int do_ipc_pselect(int nfds, fd_set *readfds, fd_set *writefds,
+                   fd_set *errorfds, const struct timespec *timeout,
+                   const sigset_t *sigmask);
+int do_ipc_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
+                  struct timeval *timeout);
 
 int do_ipc_shutdown(int sockfd, int how);
 

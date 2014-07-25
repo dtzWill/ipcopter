@@ -266,13 +266,13 @@ static inline int __internal_pselect(int nfds, fd_set *readfds,
                                      fd_set *writefds, fd_set *errorfds,
                                      const struct timespec *timeout,
                                      const sigset_t *sigmask) {
-  return __real_pselect(nfds, readfds, writefds, errorfds, timeout, sigmask);
+  return do_ipc_pselect(nfds, readfds, writefds, errorfds, timeout, sigmask);
 }
 
 EXTERN_C int __real_select(int nfds, fd_set *readfds, fd_set *writefds,
                            fd_set *errorfds, struct timeval *timeout);
 static inline int __internal_select(int nfds, fd_set *readfds, fd_set *writefds,
                                     fd_set *errorfds, struct timeval *timeout) {
-  return __real_select(nfds, readfds, writefds, errorfds, timeout);
+  return do_ipc_select(nfds, readfds, writefds, errorfds, timeout);
 }
 #endif // _SOCKET_INLINE_H_
