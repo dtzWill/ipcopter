@@ -1,0 +1,6 @@
+FROM      will/ipc-hook
+MAINTAINER Will Dietz <w@wdtz.org>
+
+CMD dd if=/dev/zero bs=1M count=5120 status=none|nc server 3000
+
+

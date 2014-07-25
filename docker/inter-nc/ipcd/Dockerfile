@@ -1,0 +1,15 @@
+FROM      will/ipc-hook
+MAINTAINER Will Dietz <w@wdtz.org>
+
+# Remove preload library and mechanism to force it to be preloaded
+RUN rm /lib/libipc.so /tmp/ipcd.sock /etc/ld.so.preload
+
+# Treat /tmp as volume for sharing across containers
+# Actually sharing /tmp is lame, but that's where
+# the socket lives presently, this should change.
+VOLUME /tmp
+
+CMD /bin/ipcd
+
+
+
