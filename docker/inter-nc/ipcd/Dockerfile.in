@@ -1,4 +1,4 @@
-FROM      will/ipc-hook
+FROM      {{USER}}/ipc-hook
 MAINTAINER Will Dietz <w@wdtz.org>
 
 # Remove preload library and mechanism to force it to be preloaded

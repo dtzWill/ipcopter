@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# XXX: Assumes will/ipc-hook already exists
-
 function status() {
   echo
   echo
@@ -15,8 +13,18 @@ function update() {
 }
 
 
+# Just assume ipc-hook base image already exists for now.
+echo "(Assuming ipc-hook base image already exists!)"
+# status "Building components and base image"
+# cd ../ipc-test/ && ./build.sh && cd -
 
 status "Generating containers"
+
+update "Configuring local Dockerfiles..."
+for f in {ipcd,nc-server,nc-client}/Dockerfile; do
+	sed -e "s/{{USER}}/$USER/g" $f.in > $f
+done
+
 update "Generating IPCD container..."
 docker build -q -t $USER/ipcd ipcd > /dev/null
 
