@@ -36,4 +36,4 @@ rm -rf $BIN_DIR
 echo ""
 echo "Successfully created ipcopter container, tagged it as '$TAG'"
 echo "To start a shell in this container, run the following command:"
-echo "docker run -i -t $TAG"
+echo "docker run --rm -i -t $TAG"
