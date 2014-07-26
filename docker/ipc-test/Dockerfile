@@ -1,6 +1,6 @@
 # Build ipcopter-ready container for development testing.
 # http://docs.docker.com/reference/builder/
-FROM      ubuntu
+FROM      ubuntu:14.10
 MAINTAINER Will Dietz <w@wdtz.org>
 
 RUN sed -i 's@main restricted@main restricted multiverse@' /etc/apt/sources.list
