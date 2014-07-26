@@ -53,34 +53,57 @@ func listenForClients(C *IPCContext) {
 		panic(err)
 	}
 
+	queue := make(chan *ContextRequest)
+
+	go FIFOhandler(C, queue)
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Printf("Error in accept: %s\n", err.Error())
 			continue
 		}
-		go handleConnection(C, conn)
+		go handleConnection(C, conn, queue)
 	}
 }
 
-func handleConnection(Context *IPCContext, C net.Conn) {
+type ContextResponse struct {
+	Message string
+	Error   *ReqError
+}
+
+type ContextRequest struct {
+	C          net.Conn
+	Line       string
+	ResultChan chan ContextResponse
+}
+
+func FIFOhandler(Context *IPCContext, queue chan *ContextRequest) {
+	for req := range queue {
+		msg, err := processRequestLine(Context, req.C, req.Line)
+		req.ResultChan <- ContextResponse{msg, err}
+	}
+}
+
+func handleConnection(Context *IPCContext, C net.Conn, queue chan *ContextRequest) {
 	// TODO: Use something more structured like protobuf, etc
 	b := bufio.NewReader(C)
 	defer C.Close()
 
+	ResultChan := make(chan ContextResponse)
 	for {
 		line, err := b.ReadBytes('\n')
 		if err != nil { // EOF, or worse
 			break
 		}
 		lineString := strings.TrimSuffix(string(line), "\n")
-		msg, reqerr := processRequestLine(Context, C, lineString)
-		if reqerr != nil {
-			resp := reqerr.Response()
-			// fmt.Printf("<-- Success '%s'\n", resp)
+		queue <- &ContextRequest{C, lineString, ResultChan}
+		result := <-ResultChan
+		if result.Error != nil {
+			resp := result.Error.Response()
 			C.Write([]byte(resp + "\n"))
 		} else {
-			C.Write([]byte(fmt.Sprintf("200 %s\n", msg)))
+			C.Write([]byte(fmt.Sprintf("200 %s\n", result.Message)))
 		}
 	}
 }
