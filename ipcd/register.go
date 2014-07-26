@@ -28,10 +28,10 @@ type EndPointInfo struct {
 	Info       *LocalInfo
 	KludgePair *EndPointInfo
 	RefCount   int
+	ID         int
 }
 
 type IPCContext struct {
-	IDMap  map[EndPoint]int
 	EPMap  map[int]*EndPointInfo
 	Lock   sync.Mutex
 	FreeID int
@@ -42,7 +42,6 @@ type IPCContext struct {
 
 func NewContext() *IPCContext {
 	C := &IPCContext{}
-	C.IDMap = make(map[EndPoint]int)
 	C.EPMap = make(map[int]*EndPointInfo)
 	return C
 }
@@ -51,17 +50,13 @@ func (C *IPCContext) register(PID, FD int) (int, error) {
 	C.Lock.Lock()
 	defer C.Lock.Unlock()
 
-	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 1 /* refcnt */}
-	if _, exist := C.IDMap[EPI.EP]; exist {
-		return 0, errors.New("Duplicate registration!")
-	}
-
 	ID := C.FreeID
 	// Simple allocation scheme.
 	// TODO: Handle overflow and ID re-use
 	C.FreeID++
 
-	C.IDMap[EPI.EP] = ID
+	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 1 /* refcnt */, ID}
+
 	C.EPMap[ID] = &EPI
 
 	return ID, nil
@@ -145,7 +140,6 @@ func (C *IPCContext) unregister(ID int) error {
 	}
 
 	// Remove enties from map
-	delete(C.IDMap, EPI.EP)
 	delete(C.EPMap, ID)
 
 	// TODO: "Un-localize" endpoint?
@@ -191,7 +185,6 @@ func (C *IPCContext) removeall(PID int) int {
 			EPI.Info.A.LocalFD.Close()
 			EPI.Info.B.LocalFD.Close()
 		}
-		delete(C.IDMap, EPI.EP)
 
 		if C.WaitingEPI == EPI {
 			C.WaitingEPI = nil
@@ -212,7 +205,7 @@ func (C *IPCContext) pairkludge(ID int) (int, error) {
 
 	// If already kludge-paired this, return its kludge-pal
 	if EPI.KludgePair != nil {
-		return C.IDMap[EPI.KludgePair.EP], nil
+		return EPI.KludgePair.ID, nil
 	}
 
 	// Otherwise, is there a pair candidate waiting?
@@ -229,7 +222,7 @@ func (C *IPCContext) pairkludge(ID int) (int, error) {
 		EPI.KludgePair = Waiting
 		Waiting.KludgePair = EPI
 		C.WaitingEPI = nil
-		return C.IDMap[Waiting.EP], nil
+		return Waiting.ID, nil
 	}
 
 	// Nope, well track this in case someone
