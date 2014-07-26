@@ -61,7 +61,7 @@ FILE *getlogfp() {
     fprintf(stderr, "Error opening log file!");
     abort();
   }
-  bool success = rename_fd(logfd, MAGIC_LOGGING_FD);
+  bool success = rename_fd(logfd, MAGIC_LOGGING_FD, /* cloexec */ true);
   if (!success) {
     fprintf(stderr, "Error duplicating logging fd!\n");
     abort();

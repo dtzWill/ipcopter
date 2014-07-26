@@ -136,21 +136,22 @@ int getlocalfd(int fd) {
 }
 
 char is_protected_fd(int fd) {
-  if (!inbounds_fd(fd)) {
-    return false;
-  }
   // Logging fd is protected
   if (FILE *logfp = getlogfp())
     if (int logfd = fileno(logfp))
       if (logfd == fd)
         return true;
 
-  // So are all local fd's:
-  if (is_local(fd))
-    return true;
-
   // Check for ipcd protected sockets:
   if (ipcd_is_protected(fd))
+    return true;
+
+  if (!inbounds_fd(fd)) {
+    return false;
+  }
+
+  // So are all local fd's:
+  if (is_local(fd))
     return true;
 
   // Everything else is unprotected

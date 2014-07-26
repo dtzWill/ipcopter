@@ -47,7 +47,7 @@ void connect_to_ipcd() {
     perror("socket");
     exit(1);
   }
-  bool rename_success = rename_fd(s, MAGIC_SOCKET_FD);
+  bool rename_success = rename_fd(s, MAGIC_SOCKET_FD, /* cloexec */ true);
   assert(rename_success);
   s = MAGIC_SOCKET_FD;
 
@@ -149,7 +149,7 @@ void connect_if_needed() {
     return;
 
   ipclog("Reconnecting to ipcd in child...\n");
-  close(ipcd_socket);
+  __real_close(ipcd_socket);
   connect_to_ipcd();
 }
 

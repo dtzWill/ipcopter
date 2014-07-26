@@ -18,13 +18,16 @@
 #include "real.h"
 
 #include <assert.h>
+#include <fcntl.h>
 
-bool rename_fd(int fd, int newfd) {
+bool rename_fd(int fd, int newfd, bool cloexec) {
   // Duplicate to new fd
-  int ret = __real_dup2(fd, newfd);
+  int cmd = cloexec ? F_DUPFD_CLOEXEC : F_DUPFD;
+  int ret = __real_fcntl_int(fd, cmd, newfd);
   if (ret == -1) {
     return false;
   }
+  assert(ret == newfd);
   // Close the original fd we were given
   ret = __real_close(fd);
   if (ret != 0) {

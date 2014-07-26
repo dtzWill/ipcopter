@@ -19,7 +19,9 @@
 // Attempt to duplicate fd into newfd and close fd,
 // effectively 'renaming' fd to newfd.
 // newfd will be closed if previously open.
+// 'cloexec' indicates whether newfd should
+// be set to CLOSE-ON-EXEC or not.
 // Returns true on success.
-bool rename_fd(int fd, int newfd);
+bool rename_fd(int fd, int newfd, bool cloexec);
 
 #endif // _RENAME_FD_H_

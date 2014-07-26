@@ -14,6 +14,7 @@
 #define _REAL_H_
 
 #include <poll.h>
+#include <stdint.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -44,7 +45,12 @@ EXTERN_C int __real_listen(int fd, int backlog);
 
 EXTERN_C int __real_close(int fd);
 EXTERN_C int __real_shutdown(int sockfd, int how);
+
 EXTERN_C int __real_fcntl(int fd, int cmd, void *arg);
+// Helper to avoid annoying cast:
+static inline int __real_fcntl_int(int fd, int cmd, int arg) {
+  return __real_fcntl(fd, cmd, (void *)(uintptr_t)(unsigned)arg);
+}
 EXTERN_C int __real_dup(int fd);
 EXTERN_C int __real_dup2(int fd1, int fd2);
 EXTERN_C int __real_poll(struct pollfd fds[], nfds_t nfds, int timeout);

@@ -37,15 +37,14 @@ void shm_state_save() {
   int fd = get_shm(O_RDWR | O_CREAT | O_EXCL);
   assert(fd != -1);
 
-  bool success = rename_fd(fd, MAGIC_SHM_FD);
+  bool success = rename_fd(fd, MAGIC_SHM_FD, /* cloexec */ false);
   assert(success && "Failed to rename SHM fd!");
 
   // Do *not* close on exec! :)
   int flags = __real_fcntl(MAGIC_SHM_FD, F_GETFD, /* kludge */ 0);
   assert(flags >= 0);
   flags &= ~FD_CLOEXEC;
-  int ret =
-      __real_fcntl(MAGIC_SHM_FD, F_SETFD, (void *)(uintptr_t)(unsigned)flags);
+  int ret = __real_fcntl_int(MAGIC_SHM_FD, F_SETFD, flags);
   assert(ret != -1);
 
   // Size the memory segment:
