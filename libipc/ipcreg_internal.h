@@ -15,6 +15,7 @@
 #define _IPCREG_INTERNAL_H_
 
 #include "ipcd.h"
+#include "debug.h"
 
 #include <assert.h>
 
@@ -37,15 +38,19 @@ typedef struct {
 // For now, just index directly into pre-allocate table with fd.
 // We will also need a way to go from nonce to fd!
 const unsigned TABLE_SIZE = 1 << 10;
-extern endpoint EPMap[TABLE_SIZE];
-extern ipc_info EndpointInfo[TABLE_SIZE];
-extern bool IsLocalFD[TABLE_SIZE];
+typedef struct {
+  endpoint EPMap[TABLE_SIZE];
+  ipc_info EndpointInfo[TABLE_SIZE];
+  bool IsLocalFD[TABLE_SIZE];
+} libipc_state;
+
+extern libipc_state state;
 
 static inline char inbounds_fd(int fd) { return (unsigned)fd <= TABLE_SIZE; }
 static inline char valid_ep(endpoint ep) { return (unsigned)ep <= TABLE_SIZE; }
 static inline bool &is_local(int fd) {
   assert(inbounds_fd(fd));
-  return IsLocalFD[fd];
+  return state.IsLocalFD[fd];
 }
 
 static inline endpoint &getEP(int fd) {
@@ -54,11 +59,11 @@ static inline endpoint &getEP(int fd) {
            TABLE_SIZE);
   }
   assert(inbounds_fd(fd));
-  return EPMap[fd];
+  return state.EPMap[fd];
 }
 static inline ipc_info &getInfo(endpoint ep) {
   assert(valid_ep(ep));
-  return EndpointInfo[ep];
+  return state.EndpointInfo[ep];
 }
 
 #endif // _IPCREG_INTERNAL_H_

@@ -16,24 +16,24 @@
 #include "ipcreg_internal.h"
 #include "ipcd.h"
 #include "socket_inline.h"
+#include "shm.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
 
 // TODO: This table is presently not used thread-safe at all!
-endpoint EPMap[TABLE_SIZE] = {};
-ipc_info EndpointInfo[TABLE_SIZE] = {};
-bool IsLocalFD[TABLE_SIZE] = {};
+libipc_state state = {{}, {}, {}};
 
 void invalidateEPMap() {
   // Set all endpoint identifiers to 'invalid'
   for (unsigned i = 0; i < TABLE_SIZE; ++i)
-    EPMap[i] = EP_INVALID;
+    state.EPMap[i] = EP_INVALID;
 }
 
 void __attribute__((constructor)) ipcopt_init() {
   invalidateEPMap();
+  shm_state_restore();
 }
 
 void invalidate(endpoint ep) {

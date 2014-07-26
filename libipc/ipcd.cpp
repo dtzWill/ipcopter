@@ -41,7 +41,7 @@ void connect_to_ipcd() {
   int s, len;
   struct sockaddr_un remote;
 
-  if ((s = __real_socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+  if ((s = __real_socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0)) == -1) {
     perror("socket");
     exit(1);
   }

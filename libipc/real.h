@@ -22,6 +22,8 @@
 #endif
 
 EXTERN_C pid_t __real_fork(void);
+EXTERN_C int __real_execve(const char *path, char *const argv[],
+                           char *const envp[]);
 EXTERN_C int __real_socket(int domain, int type, int protocol);
 EXTERN_C ssize_t __real_recv(int fd, void *buf, size_t count, int flags);
 EXTERN_C ssize_t __real_send(int fd, const void *buf, size_t count, int flags);
