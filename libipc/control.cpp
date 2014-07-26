@@ -16,6 +16,7 @@
 #include "debug.h"
 #include "ipcd.h"
 #include "ipcreg_internal.h"
+#include "string.h"
 #include "real.h"
 
 #include <algorithm>

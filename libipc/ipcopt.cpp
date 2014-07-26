@@ -174,3 +174,26 @@ void register_inherited_fds() {
     }
   }
 }
+
+void dup_inet_socket(int fd1, int fd2) {
+  assert(!is_protected_fd(fd2));
+
+  // Ensure fd2 is closed if we didn't already think so.
+  unregister_inet_socket(fd2);
+
+  ipclog("Dup: %d -> %d\n", fd1, fd2);
+
+  // Get info for the source descriptor
+  endpoint ep = getEP(fd1);
+  assert(valid_ep(ep));
+
+  ipc_info &i = getInfo(ep);
+  assert(i.ref_count > 0);
+  assert(i.state != STATE_INVALID);
+  // Bump reference count
+  i.ref_count++;
+
+  // Point fd2 at this ep:
+  assert(getEP(fd2) == EP_INVALID);
+  getEP(fd2) = ep;
+}

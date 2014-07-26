@@ -28,6 +28,7 @@ void register_inet_socket(int fd);
 char is_registered_socket(int fd);
 char is_optimized_socket_safe(int fd);
 void unregister_inet_socket(int fd);
+void dup_inet_socket(int fd, int fd2);
 
 int getlocalfd(int fd);
 void register_inherited_fds();
