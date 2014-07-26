@@ -124,3 +124,19 @@ int do_ipc_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
 
   return __real_select(nfds, r, w, e, timeout);
 }
+
+int do_ipc_fcntl(int fd, int cmd, void *arg) {
+  int ret = __real_fcntl(fd, cmd, arg);
+
+  // Do something different/special for localfd?
+  return ret;
+}
+int do_ipc_setsockopt(int socket, int level, int option_name,
+                      const void *option_value, socklen_t option_len) {
+  int ret = __real_setsockopt(socket, level, option_name, option_value, option_len);
+
+  // TODO: Apply options (if applicible?) to local fast socket
+  // TODO: Track options set for configuration of fast socket
+
+  return ret;
+}

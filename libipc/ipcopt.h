@@ -22,6 +22,7 @@ extern "C" {
 #include <stdint.h>
 #include <unistd.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 
 // FD registration
 void register_inet_socket(int fd);
@@ -50,6 +51,10 @@ int do_ipc_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
                   struct timeval *timeout);
 
 int do_ipc_shutdown(int sockfd, int how);
+
+int do_ipc_fcntl(int fd, int cmd, void *arg);
+int do_ipc_setsockopt(int socket, int level, int option_name,
+                      const void *option_value, socklen_t option_len);
 
 #ifdef __cplusplus
 } // extern "C"

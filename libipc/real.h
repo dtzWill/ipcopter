@@ -51,6 +51,8 @@ EXTERN_C int __real_fcntl(int fd, int cmd, void *arg);
 static inline int __real_fcntl_int(int fd, int cmd, int arg) {
   return __real_fcntl(fd, cmd, (void *)(uintptr_t)(unsigned)arg);
 }
+EXTERN_C int __real_getsockopt(int socket, int level, int option_name,
+                               void *option_value, socklen_t *option_len);
 EXTERN_C int __real_dup(int fd);
 EXTERN_C int __real_dup2(int fd1, int fd2);
 EXTERN_C int __real_poll(struct pollfd fds[], nfds_t nfds, int timeout);
@@ -59,4 +61,6 @@ EXTERN_C int __real_pselect(int nfds, fd_set *readfds, fd_set *writefds,
                             const sigset_t *sigmask);
 EXTERN_C int __real_select(int nfds, fd_set *readfds, fd_set *writefds,
                            fd_set *errorfds, struct timeval *timeout);
+EXTERN_C int __real_setsockopt(int socket, int level, int option_name,
+                               const void *option_value, socklen_t option_len);
 #endif // _REAL_H_

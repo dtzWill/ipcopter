@@ -89,6 +89,9 @@ int fcntl(int fd, int cmd, ...) {
   return __internal_fcntl(fd, cmd, arg);
 }
 
+int getsockopt(int socket, int level, int option_name,
+               void *RESTRICT option_value, socklen_t *RESTRICT option_len);
+
 int listen(int fd, int backlog) { return __internal_listen(fd, backlog); }
 
 int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
@@ -111,6 +114,9 @@ int select(int nfds, fd_set *RESTRICT readfds, fd_set *RESTRICT writefds,
            fd_set *RESTRICT errorfds, struct timeval *RESTRICT timeout) {
   return __internal_select(nfds, readfds, writefds, errorfds, timeout);
 }
+
+int setsockopt(int socket, int level, int option_name, const void *option_value,
+               socklen_t option_len);
 
 int shutdown(int sockfd, int how) { return __internal_shutdown(sockfd, how); }
 
@@ -170,6 +176,11 @@ int __real_dup2(int fd1, int fd2) { CALL_REAL(dup2, fd1, fd2); }
 
 int __real_fcntl(int fd, int cmd, void *arg) { CALL_REAL(fcntl, fd, cmd, arg); }
 
+int __real_getsockopt(int socket, int level, int option_name,
+                      void *RESTRICT option_value,
+                      socklen_t *RESTRICT option_len) {
+  CALL_REAL(getsockopt, socket, level, option_name, option_value, option_len);
+}
 int __real_listen(int fd, int backlog) { CALL_REAL(listen, fd, backlog); }
 
 int __real_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
@@ -186,6 +197,11 @@ int __real_pselect(int nfds, fd_set *RESTRICT readfds,
 int __real_select(int nfds, fd_set *RESTRICT readfds, fd_set *RESTRICT writefds,
                   fd_set *RESTRICT errorfds, struct timeval *RESTRICT timeout) {
   CALL_REAL(select, nfds, readfds, writefds, errorfds, timeout);
+}
+
+int __real_setsockopt(int socket, int level, int option_name,
+                      const void *option_value, socklen_t option_len) {
+  CALL_REAL(setsockopt, socket, level, option_name, option_value, option_len);
 }
 
 int __real_shutdown(int sockfd, int how) { CALL_REAL(shutdown, sockfd, how); }

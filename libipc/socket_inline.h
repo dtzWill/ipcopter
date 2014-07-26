@@ -182,10 +182,17 @@ static inline int __internal_shutdown(int sockfd, int how) {
 static inline int __internal_fcntl(int fd, int cmd, void *arg) {
   // TODO: do something
   if (is_protected_fd(fd)) {
-    ipclog("Attempting fcntl(fd=%d, cmd=%d, arg=%p) for protected fd!\n",
-           fd, cmd, arg);
+    ipclog("Attempting fcntl(fd=%d, cmd=%d, arg=%p) for protected fd!\n", fd,
+           cmd, arg);
   }
-  int ret = __real_fcntl(fd, cmd, arg);
+
+  // TODO: Handle F_DUPFD and friends.
+
+  int ret;
+  if (!is_registered_socket(fd))
+    ret = __real_fcntl(fd, cmd, arg);
+  else
+    ret = do_ipc_fcntl(fd, cmd, arg);
 
   return ret;
 }
@@ -244,5 +251,27 @@ static inline int __internal_pselect(int nfds, fd_set *readfds,
 static inline int __internal_select(int nfds, fd_set *readfds, fd_set *writefds,
                                     fd_set *errorfds, struct timeval *timeout) {
   return do_ipc_select(nfds, readfds, writefds, errorfds, timeout);
+}
+
+static inline int __internal_getsockopt(int socket, int level, int option_name,
+                                        void *option_value,
+                                        socklen_t *option_len) {
+  // TODO: Do something here besides forwarding to actual impl?
+  return __real_getsockopt(socket, level, option_name, option_value,
+                           option_len);
+}
+
+static inline int __internal_setsockopt(int socket, int level, int option_name,
+                                        const void *option_value,
+                                        socklen_t option_len) {
+  int ret;
+  if (!is_registered_socket(socket))
+    ret =
+        __real_setsockopt(socket, level, option_name, option_value, option_len);
+  else
+    ret =
+        do_ipc_setsockopt(socket, level, option_name, option_value, option_len);
+
+  return ret;
 }
 #endif // _SOCKET_INLINE_H_
