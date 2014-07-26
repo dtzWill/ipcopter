@@ -28,10 +28,10 @@ func StartServerProcess() *os.Process {
 // Fails test if anythin goes wrong.
 func DoReq(req string, t *testing.T) string {
 	c, err := net.Dial("unix", SOCKET_PATH)
-	defer c.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer c.Close()
 
 	c.Write([]byte(req))
 
