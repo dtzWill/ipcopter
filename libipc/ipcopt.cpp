@@ -22,94 +22,114 @@
 #include <unistd.h>
 
 // TODO: This table is presently not used thread-safe at all!
-ipc_info IpcDescTable[TABLE_SIZE] = {};
+endpoint EPMap[TABLE_SIZE];
+ipc_info EndpointInfo[TABLE_SIZE] = {};
 
-void invalidate(ipc_info *i) {
-  assert(i->valid);
-  // Mark as invalid
-  i->valid = false;
-  // And invalidate the data it contains for good measure
-  i->bytes_trans = 0;
-  i->localfd = 0;
-  i->ep = EP_INVALID;
-  i->state = STATE_UNOPT;
+void invalidateEPMap() {
+  // Set all endpoint identifiers to 'invalid'
+  for (unsigned i = 0; i < TABLE_SIZE; ++i)
+    EPMap[i] = EP_INVALID;
+}
+
+void __attribute__((constructor)) ipcopt_init() {
+  invalidateEPMap();
+}
+
+void invalidate(endpoint ep) {
+  ipc_info &i = getInfo(ep);
+  assert(i.state != STATE_INVALID);
+  assert(i.ref_count == 0);
+  i.bytes_trans = 0;
+  i.localfd = 0;
+  i.state = STATE_INVALID;
 }
 
 void register_inet_socket(int fd) {
+  // Freshly created socket
   ipclog("Registering socket fd=%d\n", fd);
-  ipc_info *i = getFDDesc(fd);
+  endpoint &ep = getEP(fd);
+  // We better not think we already have an endpoint ID for this fd
+  assert(ep == EP_INVALID);
+  ep = ipcd_register_socket(fd);
 
-  // Gracefully handle duplicate registrations?
-  if (i->valid) {
-    ipclog("Already registered fd %d?? Ignoring...\n", fd);
-    return;
-  }
-  assert(!i->valid);
-  endpoint ep = ipcd_register_socket(fd);
-  assert(ep != EP_INVALID);
-  // Initialize!
-  i->bytes_trans = 0;
-  i->localfd = 0;
-  i->ep = ep;
-  i->state = STATE_UNOPT;
-  i->valid = true;
+  ipc_info &i = getInfo(ep);
+  assert(i.ref_count == 0);
+  assert(i.state == STATE_INVALID);
+  i.bytes_trans = 0;
+  i.localfd = 0;
+  i.ref_count++;
+  i.state = STATE_UNOPT;
 }
 
 void unregister_inet_socket(int fd) {
   if (!inbounds_fd(fd)) {
     return;
   }
-  // ipclog("Unregistering socket fd=%d\n", fd);
-  ipc_info *i = getFDDesc(fd);
-  if (i->valid) {
-    ipclog("Unregistering socket fd=%d, bytes transferred: %zu\n", fd,
-           i->bytes_trans);
-    assert(i->ep != EP_INVALID);
-    bool success = ipcd_unregister_socket(i->ep);
-    if (!success) {
-      ipclog("ipcd_unregister_socket(%d) failed!\n", i->ep);
-      return;
-    }
-    assert(success);
-    // TODO: Should IPCD do this? *Can* it?
-    if (i->localfd) {
-      assert(i->state == STATE_OPTIMIZED);
-      __real_close(i->localfd);
 
-      // Remove entry for local fd
-      ipc_info *li = getFDDesc(i->localfd);
-      assert(li->state == STATE_LOCALFD);
-      invalidate(li);
+  endpoint ep = getEP(fd);
+  // Allow attempt to unregister fd's we don't
+  // have endpoints for, this happens all the time :)
+  if (ep == EP_INVALID) {
+    return;
+  }
+  ipc_info &i = getInfo(ep);
+  assert(i.state != STATE_INVALID);
+  ipclog("Unregistering socket fd=%d, bytes transferred: %zu\n", fd,
+         i.bytes_trans);
+
+  assert(i.ref_count > 0);
+  // FD no longer refers to this endpoint!
+  getEP(fd) = EP_INVALID;
+  if (--i.ref_count == 0) {
+    // Last reference to this endpoint,
+    // tell ipcd we're done with it.
+    bool success = ipcd_unregister_socket(ep);
+    if (!success) {
+      ipclog("ipcd_unregister_socket(%d) failed!\n", ep);
     }
-    invalidate(i);
+
+    // Close local fd if exists
+    if (i.localfd) {
+      assert(i.state == STATE_OPTIMIZED);
+      __real_close(i.localfd);
+
+      bool &isLocal = is_local(i.localfd);
+      // Consistency check
+      assert(isLocal);
+      assert(getEP(i.localfd) == EP_INVALID);
+      // No longer special 'local' fd
+      isLocal = false;
+    }
+
+    invalidate(ep);
+    return;
+  } else {
+    ipclog("Retaining endpoint info for ep=%d, despite unreegistering fd=%d!\n",
+           ep, fd);
   }
 }
 
-char is_registered_socket(int fd) {
-  ipc_info *i = getFDDesc(fd);
-  return i->valid && (i->state != STATE_LOCALFD);
-}
+char is_registered_socket(int fd) { return getEP(fd) != EP_INVALID; }
 
 char is_optimized_socket_safe(int fd) {
-  if (!inbounds_fd(fd))
+  if (!inbounds_fd(fd) || is_local(fd))
     return false;
 
-  ipc_info *i = getFDDesc(fd);
-  return i->valid && (i->state == STATE_OPTIMIZED);
+  endpoint ep = getEP(fd);
+  if (ep == EP_INVALID)
+    return false;
+
+  return getInfo(ep).state == STATE_OPTIMIZED;
 }
 
 int getlocalfd(int fd) {
   assert(is_registered_socket(fd));
-  int local = ipcd_getlocalfd(getFDDesc(fd)->ep);
+  int local = ipcd_getlocalfd(getEP(fd));
 
-  // Create entry in fd table indicating this
-  // fd is being used for optimized transport.
-  ipc_info *i = getFDDesc(local);
-  i->bytes_trans = 0;
-  i->localfd = 0;
-  i->ep = EP_INVALID;
-  i->state = STATE_LOCALFD;
-  i->valid = true;
+  bool &isLocal = is_local(local);
+  assert(!isLocal);
+  assert(getEP(local) == EP_INVALID);
+  isLocal = true;
 
   return local;
 }
@@ -125,8 +145,7 @@ char is_protected_fd(int fd) {
         return true;
 
   // So are all local fd's:
-  ipc_info *i = getFDDesc(fd);
-  if (i->valid && i->state == STATE_LOCALFD)
+  if (is_local(fd))
     return true;
 
   // Check for ipcd protected sockets:
@@ -141,14 +160,17 @@ void register_inherited_fds() {
   // We just forked, bump ref count
   // on the fd's we inherited.
 
-  for (unsigned fd = 0; fd < TABLE_SIZE; ++fd) {
-    ipc_info *i = getFDDesc(fd);
-    if (is_registered_socket(fd)) {
-      bool ret = ipcd_reregister_socket(i->ep, fd);
-      if (!ret) {
-        ipclog("Failed to reregister endpoint '%d' for inherited fd '%d'\n",
-               i->ep, fd);
-      }
-    }
-  }
+  // TODO: Implement me!
+  assert(0 && "Not yet implemented!");
+
+  //for (unsigned fd = 0; fd < TABLE_SIZE; ++fd) {
+  //  ipc_info *i = getFDDesc(fd);
+  //  if (is_registered_socket(fd)) {
+  //    bool ret = ipcd_reregister_socket(i->ep, fd);
+  //    if (!ret) {
+  //      ipclog("Failed to reregister endpoint '%d' for inherited fd '%d'\n",
+  //             i->ep, fd);
+  //    }
+  //  }
+  //}
 }

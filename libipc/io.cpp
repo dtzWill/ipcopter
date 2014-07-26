@@ -42,16 +42,17 @@ typedef ssize_t (*IOFunc)(...);
 
 template <typename buf_t>
 ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
-  ipc_info *i = getFDDesc(fd);
-  assert(i->valid);
+  endpoint ep = getEP(fd);
+  ipc_info &i = getInfo(ep);
+  assert(i.state != STATE_INVALID);
 
   // If localized, just use fast socket:
-  if (i->state == STATE_OPTIMIZED) {
-    return IO(i->localfd, buf, count, flags);
+  if (i.state == STATE_OPTIMIZED) {
+    return IO(i.localfd, buf, count, flags);
   }
 
   // Otherwise, use original fd:
-  ssize_t rem = (TRANS_THRESHOLD - i->bytes_trans);
+  ssize_t rem = (TRANS_THRESHOLD - i.bytes_trans);
   if (rem > 0 && size_t(rem) <= count) {
     ssize_t ret = IO(fd, buf, rem, flags);
 
@@ -59,29 +60,29 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
       return ret;
     }
 
-    i->bytes_trans += ret;
+    i.bytes_trans += ret;
 
-    if (i->bytes_trans == TRANS_THRESHOLD) {
+    if (i.bytes_trans == TRANS_THRESHOLD) {
       ipclog("Completed partial operation to sync at THRESHOLD for fd=%d!\n",
              fd);
       // TODO: Async!
       endpoint remote;
       size_t attempts = 0;
-      while (((remote = ipcd_endpoint_kludge(i->ep)) == EP_INVALID) &&
+      while (((remote = ipcd_endpoint_kludge(ep)) == EP_INVALID) &&
              ++attempts < MAX_SYNC_ATTEMPTS) {
         sched_yield();
       }
 
-      if (remote != EP_INVALID) {
-        ipclog("Found remote endpoint! Local=%d, Remote=%d Attempts=%zu!\n",
-               i->ep, remote, attempts);
+      if (valid_ep(remote)) {
+        ipclog("Found remote endpoint! Local=%d, Remote=%d Attempts=%zu!\n", ep,
+               remote, attempts);
 
-        bool success = ipcd_localize(i->ep, remote);
+        bool success = ipcd_localize(ep, remote);
         assert(success && "Failed to localize! Sadtimes! :(");
-        i->localfd = getlocalfd(fd);
-        i->state = STATE_OPTIMIZED;
+        i.localfd = getlocalfd(fd);
+        i.state = STATE_OPTIMIZED;
 
-        copy_bufsizes(fd, i->localfd);
+        copy_bufsizes(fd, i.localfd);
       }
     }
 
@@ -91,13 +92,13 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
   ssize_t ret = IO(fd, buf, count, flags);
 
   // We don't handle other states yet
-  assert(i->state == STATE_UNOPT);
+  assert(i.state == STATE_UNOPT);
 
   if (ret == -1)
     return ret;
 
   // Successful operation, add to running total.
-  i->bytes_trans += ret;
+  i.bytes_trans += ret;
 
   return ret;
 }

@@ -21,16 +21,16 @@
 #include <algorithm>
 
 int do_ipc_shutdown(int sockfd, int how) {
-  ipc_info *i = getFDDesc(sockfd);
-  assert(i->valid);
+  ipc_info &i = getInfo(getEP(sockfd));
+  assert(i.state != STATE_INVALID);
 
   int ret = __real_shutdown(sockfd, how);
 
   // Do similar shutdown operation on local fd, if exists:
-  if (i->state == STATE_OPTIMIZED) {
-    assert(i->localfd);
-    int localret = __real_shutdown(i->localfd, how);
-    assert(localret == ret);
+  if (i.state == STATE_OPTIMIZED) {
+    assert(i.localfd);
+    int localret = __real_shutdown(i.localfd, how);
+    assert(localret == ret); // We don't handle mismatch yet
   }
 
   return ret;
@@ -48,8 +48,7 @@ int do_ipc_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
     int fd = newfds[i].fd;
     if (!is_optimized_socket_safe(fd))
       continue;
-    ipc_info *info = getFDDesc(fd);
-    newfds[i].fd = info->localfd;
+    newfds[i].fd = getInfo(getEP(fd)).localfd;
   }
   return __real_poll(newfds, nfds, timeout);
 }
@@ -90,7 +89,7 @@ fd_set *copy_if_needed(fd_set *src, fd_set *copy, int nfds) {
       assert(!FD_ISSET(fd, copy));
       FD_SET(fd, copy);
     } else {
-      int localfd = getFDDesc(fd)->localfd;
+      int localfd = getInfo(getEP(fd)).localfd;
       assert(!FD_ISSET(fd, copy));
       FD_SET(localfd, copy);
     }
