@@ -15,6 +15,8 @@
 
 #include "debug.h"
 #include "real.h"
+#include "rename_fd.h"
+#include "magic_socket_nums.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -45,6 +47,9 @@ void connect_to_ipcd() {
     perror("socket");
     exit(1);
   }
+  bool rename_success = rename_fd(s, MAGIC_SOCKET_FD);
+  assert(rename_success);
+  s = MAGIC_SOCKET_FD;
 
   remote.sun_family = AF_UNIX;
   strcpy(remote.sun_path, SOCK_PATH);

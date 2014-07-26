@@ -14,6 +14,8 @@
 #ifndef _WRAPPER_H_
 #define _WRAPPER_H_
 
+#include "getfromlibc.h"
+
 #ifdef __cplusplus
 #define BEGIN_EXTERN_C extern "C" {
 #define END_EXTERN_C }

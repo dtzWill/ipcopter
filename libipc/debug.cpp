@@ -13,7 +13,10 @@
 
 #include "debug.h"
 
+#include "magic_socket_nums.h"
 #include "real.h"
+#include "rename_fd.h"
+#include "wrapper.h"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -24,6 +27,7 @@
 
 static int mypid = 0;
 static FILE *logfp = NULL;
+
 
 FILE *getlogfp() {
 
@@ -41,18 +45,29 @@ FILE *getlogfp() {
 #endif
 
   // TODO: Definitely not thread-safe O:)
-
   if (logfp) {
     fclose(logfp);
     logfp = NULL;
   }
+
 
   const char *pid_template = "/tmp/ipcd.%d.log";
   char buf[100];
 
   sprintf(buf, pid_template, newmypid);
 
-  logfp = fopen(buf, "a");
+  int logfd = open(buf, O_CLOEXEC | O_WRONLY | O_APPEND | O_CREAT, 0777);
+  if (logfd == -1) {
+    fprintf(stderr, "Error opening log file!");
+    abort();
+  }
+  bool success = rename_fd(logfd, MAGIC_LOGGING_FD);
+  if (!success) {
+    fprintf(stderr, "Error duplicating logging fd!\n");
+    abort();
+  }
+
+  logfp = fdopen(MAGIC_LOGGING_FD, "ae");
   // If unable to open log, attempt to print to stderr and bail
   if (!logfp) {
     fprintf(stderr, "Error opening log file!");
@@ -60,29 +75,8 @@ FILE *getlogfp() {
   }
   fprintf(logfp, "Log file opened, pid=%d, oldpid=%d\n", newmypid, mypid);
 
-  // Set descriptor to close-on-exec
-  int fd = fileno(logfp);
-  int flags = __real_fcntl(fd, F_GETFD, /* kludge */ 0);
-  if (flags < 0) {
-    fprintf(stderr, "Unable to get flags for log fd!\n");
-    abort();
-  }
-  flags |= FD_CLOEXEC;
-  int ret = __real_fcntl(fd, F_SETFD, (void *)(uintptr_t)(unsigned)flags);
-  if (ret == -1) {
-    fprintf(stderr, "Unable to set FD_CLOEXEC flag on logging fd!\n");
-    abort();
-  }
 
   mypid = newmypid;
-
-  // Try to ensure we can still access this log,
-  // even if we change user or drop rights.
-  chmod(buf,0777);
-  // Ignore possible errors here for now, since the exact
-  // case we're trying to enable makes us unable to set
-  // permissions when re-opening the log file.
-  // Good enough for now O:).
 
   return logfp;
 }
