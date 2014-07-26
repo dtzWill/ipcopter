@@ -29,9 +29,9 @@ RUN mkdir -p /var/run/sshd
 RUN apt-get install -y pv netcat
 
 # Inject latest versions of the library and daemon:
+ADD start-sshd.sh /
 ADD tmp/libipc.so /lib/
 ADD tmp/ipcd /bin/
-ADD start-sshd.sh /
 
 # Ask dynamic linker to preload libipc.so into everything!
 RUN echo "/lib/libipc.so" >> /etc/ld.so.preload
