@@ -14,7 +14,8 @@
 #ifndef _SHM_H_
 #define _SHM_H_
 
-void shm_state_save();
+void shm_state_destroy();
 void shm_state_restore();
+void shm_state_save();
 
 #endif // _SHM_H_

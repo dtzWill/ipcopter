@@ -29,6 +29,12 @@ int execve(const char *path, char *const argv[], char *const envp[]) {
 
   shm_state_save();
 
-  return __real_execve(path, argv, envp);
+  int ret = __real_execve(path, argv, envp);
+
+  // On success, execve doesn't return... but here we are :).
+  // Remove the saved state.
+  shm_state_destroy();
+
+  return ret;
 }
 

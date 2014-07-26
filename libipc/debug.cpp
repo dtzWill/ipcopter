@@ -56,11 +56,13 @@ FILE *getlogfp() {
 
   sprintf(buf, pid_template, newmypid);
 
-  int logfd = open(buf, O_CLOEXEC | O_WRONLY | O_APPEND | O_CREAT, 0777);
+  int logfd = open(buf, O_CLOEXEC | O_WRONLY | O_APPEND | O_CREAT, 0666);
   if (logfd == -1) {
     fprintf(stderr, "Error opening log file!");
     abort();
   }
+  // Best-effort to make log accessible to everyone...
+  fchmod(logfd, 0666);
   bool success = rename_fd(logfd, MAGIC_LOGGING_FD, /* cloexec */ true);
   if (!success) {
     fprintf(stderr, "Error duplicating logging fd!\n");
@@ -74,7 +76,6 @@ FILE *getlogfp() {
     abort();
   }
   fprintf(logfp, "Log file opened, pid=%d, oldpid=%d\n", newmypid, mypid);
-
 
   mypid = newmypid;
 

@@ -96,3 +96,16 @@ void shm_state_restore() {
 
   ipclog("State restored!\n");
 }
+
+void shm_state_destroy() {
+  // If we have memory to restore, it'll be in our magic FD!
+  assert(is_valid_fd(MAGIC_SHM_FD));
+
+  int ret = __real_close(MAGIC_SHM_FD);
+  assert(ret == 0);
+
+  ret = shm_unlink(getShmName());
+  assert(ret != -1);
+
+  ipclog("Destroyed saved state!\n");
+}
