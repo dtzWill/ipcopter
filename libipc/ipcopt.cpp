@@ -28,7 +28,7 @@ libipc_state state = {{}, {}, {}};
 void invalidateEPMap() {
   // Set all endpoint identifiers to 'invalid'
   for (unsigned i = 0; i < TABLE_SIZE; ++i)
-    state.EPMap[i] = EP_INVALID;
+    state.FDMap[i].EP = EP_INVALID;
 }
 
 void __attribute__((constructor)) ipcopt_init() {
@@ -43,6 +43,7 @@ void invalidate(endpoint ep) {
   i.bytes_trans = 0;
   i.localfd = 0;
   i.state = STATE_INVALID;
+  i.non_blocking = false;
 }
 
 void register_inet_socket(int fd) {
@@ -60,6 +61,7 @@ void register_inet_socket(int fd) {
   i.localfd = 0;
   i.ref_count++;
   i.state = STATE_UNOPT;
+  i.non_blocking = false;
 }
 
 void unregister_inet_socket(int fd) {
@@ -201,4 +203,15 @@ void dup_inet_socket(int fd1, int fd2) {
   // Point fd2 at this ep:
   assert(getEP(fd2) == EP_INVALID);
   getEP(fd2) = ep;
+}
+
+void set_nonblocking(int fd, bool non_blocking) {
+  endpoint ep = getEP(fd);
+  assert(valid_ep(ep));
+
+  getInfo(ep).non_blocking = non_blocking;
+}
+
+void set_cloexec(int fd, bool cloexec) {
+  getFDInfo(fd).close_on_exec = cloexec;
 }

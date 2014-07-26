@@ -82,7 +82,9 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
         i.localfd = getlocalfd(fd);
         i.state = STATE_OPTIMIZED;
 
+        // Configure localfd
         copy_bufsizes(fd, i.localfd);
+        set_local_nonblocking(fd, i.non_blocking);
       }
     }
 

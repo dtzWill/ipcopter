@@ -38,6 +38,8 @@ static inline int __internal_socket(int domain, int type, int protocol) {
   bool valid_fd = (fd != -1);
   if (tcp && valid_fd) {
     register_inet_socket(fd);
+    set_nonblocking(fd, (type & SOCK_NONBLOCK) != 0);
+    set_cloexec(fd, (type & SOCK_CLOEXEC) != 0);
   }
   return fd;
 }

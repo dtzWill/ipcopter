@@ -20,6 +20,7 @@
 #include "real.h"
 
 #include <algorithm>
+#include <fcntl.h>
 
 int do_ipc_shutdown(int sockfd, int how) {
   ipc_info &i = getInfo(getEP(sockfd));
@@ -125,18 +126,57 @@ int do_ipc_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
   return __real_select(nfds, r, w, e, timeout);
 }
 
+void set_local_nonblocking(int fd, bool nonblocking) {
+  ipc_info & i = getInfo(getEP(fd));
+  assert(i.state == STATE_OPTIMIZED);
+  assert(i.localfd);
+
+  int flags = __real_fcntl(i.localfd, F_GETFL, /* kludge*/ 0);
+  assert(flags >= 0);
+  if (nonblocking)
+    flags |= O_NONBLOCK;
+  else
+    flags &= ~O_NONBLOCK;
+  int ret = __real_fcntl_int(i.localfd, F_SETFL, flags);
+  assert(ret != -1);
+}
+
 int do_ipc_fcntl(int fd, int cmd, void *arg) {
   int ret = __real_fcntl(fd, cmd, arg);
 
-  // Do something different/special for localfd?
+  if (ret == -1) {
+    // Ignore erroneous fcntl commands
+    return ret;
+  }
+
+  int iarg = (int)(uintptr_t)arg; // XXX: Desired casting behavior?
+  switch (cmd) {
+  case F_SETFD:
+    // Setting fd options
+    set_cloexec(fd, (iarg & FD_CLOEXEC) != 0);
+    break;
+  case F_SETFL: {
+    // Setting description/endpoint options
+    bool non_blocking = (iarg & O_NONBLOCK) != 0;
+    set_nonblocking(fd, non_blocking);
+    if (is_optimized_socket_safe(fd)) {
+      // Ensure localfd has same non-blocking features
+      set_local_nonblocking(fd, non_blocking);
+    }
+    break;
+  }
+  default:
+    // Ignore for now.
+    break;
+  }
+
   return ret;
 }
 int do_ipc_setsockopt(int socket, int level, int option_name,
                       const void *option_value, socklen_t option_len) {
   int ret = __real_setsockopt(socket, level, option_name, option_value, option_len);
 
-  // TODO: Apply options (if applicible?) to local fast socket
-  // TODO: Track options set for configuration of fast socket
+  // TODO: ... what options do we care about?
 
   return ret;
 }

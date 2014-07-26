@@ -31,6 +31,11 @@ char is_optimized_socket_safe(int fd);
 void unregister_inet_socket(int fd);
 void dup_inet_socket(int fd, int fd2);
 
+// Options
+void set_nonblocking(int fd, bool nonblocking);
+void set_local_nonblocking(int fd, bool nonblocking);
+void set_cloexec(int fd, bool cloexec);
+
 int getlocalfd(int fd);
 void register_inherited_fds();
 char is_protected_fd(int fd);

@@ -27,19 +27,28 @@ typedef enum {
 } EndpointState;
 
 typedef struct {
+  // Does this FD have an EP to go with it?
+  endpoint EP;
+  // Is it set to close-on-exec?
+  bool close_on_exec;
+} fd_info;
+
+typedef struct {
   // Bytes transmitted through this endpoint
   size_t bytes_trans;
   // Does this endpoint have a local fd?
   int localfd;
   uint16_t ref_count;
   EndpointState state;
+  // Non-blocking is descriptor-specific
+  bool non_blocking;
 } ipc_info;
 
 // For now, just index directly into pre-allocate table with fd.
 // We will also need a way to go from nonce to fd!
 const unsigned TABLE_SIZE = 1 << 10;
 typedef struct {
-  endpoint EPMap[TABLE_SIZE];
+  fd_info FDMap[TABLE_SIZE];
   ipc_info EndpointInfo[TABLE_SIZE];
   bool IsLocalFD[TABLE_SIZE];
 } libipc_state;
@@ -53,14 +62,18 @@ static inline bool &is_local(int fd) {
   return state.IsLocalFD[fd];
 }
 
-static inline endpoint &getEP(int fd) {
+static inline fd_info &getFDInfo(int fd) {
   if (!inbounds_fd(fd)) {
     ipclog("Attempt to access out-of-bounds fd: %d (TABLE_SIZE=%u)\n", fd,
            TABLE_SIZE);
   }
   assert(inbounds_fd(fd));
-  return state.EPMap[fd];
+
+  return state.FDMap[fd];
 }
+
+static inline endpoint &getEP(int fd) { return getFDInfo(fd).EP; }
+
 static inline ipc_info &getInfo(endpoint ep) {
   assert(valid_ep(ep));
   return state.EndpointInfo[ep];
