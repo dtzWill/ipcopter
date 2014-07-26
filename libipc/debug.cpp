@@ -62,7 +62,8 @@ FILE *getlogfp() {
     abort();
   }
   // Best-effort to make log accessible to everyone...
-  fchmod(logfd, 0666);
+  if (fchmod(logfd, 0666) == -1)
+    fprintf(stderr, "Error setting log permissions, continuing...\n");
   bool success = rename_fd(logfd, MAGIC_LOGGING_FD, /* cloexec */ true);
   if (!success) {
     fprintf(stderr, "Error duplicating logging fd!\n");

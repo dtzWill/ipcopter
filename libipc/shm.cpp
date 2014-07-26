@@ -21,6 +21,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <string.h>
 
 static char buf[100];
 const char *getShmName() {
@@ -28,13 +30,20 @@ const char *getShmName() {
   return buf;
 }
 
-int get_shm(int flags) {
-  return shm_open(getShmName(), flags, 0600);
+int get_shm(int flags, mode_t mode) {
+  int fd = shm_open(getShmName(), flags, mode);
+  if (fd != -1) {
+    int ret = fchmod(fd, mode);
+    if (ret == -1) {
+      ipclog("Failure setting shared memory permissions: %s\n", strerror(errno));
+    }
+  }
+  return fd;
 }
 
 void shm_state_save() {
   // Create shared memory segment
-  int fd = get_shm(O_RDWR | O_CREAT | O_EXCL);
+  int fd = get_shm(O_RDWR | O_CREAT | O_EXCL, 0600);
   assert(fd != -1);
 
   bool success = rename_fd(fd, MAGIC_SHM_FD, /* cloexec */ false);
