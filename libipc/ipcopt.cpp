@@ -181,6 +181,10 @@ void dup_inet_socket(int fd1, int fd2) {
   // Ensure fd2 is closed if we didn't already think so.
   unregister_inet_socket(fd2);
 
+  if (!is_registered_socket(fd1)) {
+    return;
+  }
+
   ipclog("Dup: %d -> %d\n", fd1, fd2);
 
   // Get info for the source descriptor
