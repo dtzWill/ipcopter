@@ -22,8 +22,9 @@
 #include <unistd.h>
 
 // TODO: This table is presently not used thread-safe at all!
-endpoint EPMap[TABLE_SIZE];
+endpoint EPMap[TABLE_SIZE] = {};
 ipc_info EndpointInfo[TABLE_SIZE] = {};
+bool IsLocalFD[TABLE_SIZE] = {};
 
 void invalidateEPMap() {
   // Set all endpoint identifiers to 'invalid'
@@ -160,17 +161,16 @@ void register_inherited_fds() {
   // We just forked, bump ref count
   // on the fd's we inherited.
 
-  // TODO: Implement me!
-  assert(0 && "Not yet implemented!");
-
-  //for (unsigned fd = 0; fd < TABLE_SIZE; ++fd) {
-  //  ipc_info *i = getFDDesc(fd);
-  //  if (is_registered_socket(fd)) {
-  //    bool ret = ipcd_reregister_socket(i->ep, fd);
-  //    if (!ret) {
-  //      ipclog("Failed to reregister endpoint '%d' for inherited fd '%d'\n",
-  //             i->ep, fd);
-  //    }
-  //  }
-  //}
+  ipclog("** THIS IS TEMPORARY KLUDGE **\n");
+  for (unsigned fd = 0; fd < TABLE_SIZE; ++fd) {
+    if (is_registered_socket(fd)) {
+      endpoint ep = getEP(fd);
+      assert(ep != EP_INVALID);
+      bool ret = ipcd_reregister_socket(ep, fd);
+      if (!ret) {
+        ipclog("Failed to reregister endpoint '%d' for inherited fd '%d'\n",
+               ep, fd);
+      }
+    }
+  }
 }

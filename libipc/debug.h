@@ -22,6 +22,7 @@ FILE *getlogfp();
   do {                                                                         \
     FILE *fp = getlogfp();                                                     \
     fprintf(fp, "[IPC] <%d> " str, getpid(), ##__VA_ARGS__);                   \
+    fflush(fp);                                                                \
   } while (0)
 
 #endif // _DEBUG_LOG_

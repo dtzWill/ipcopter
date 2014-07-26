@@ -14,8 +14,7 @@
 #include "ipcd.h"
 
 #include "debug.h"
-// XXX: Shouldn't need to include this for _real_*
-#include "socket_inline.h"
+#include "real.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -42,7 +41,7 @@ void connect_to_ipcd() {
   int s, len;
   struct sockaddr_un remote;
 
-  if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+  if ((s = __real_socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     perror("socket");
     exit(1);
   }
@@ -50,7 +49,7 @@ void connect_to_ipcd() {
   remote.sun_family = AF_UNIX;
   strcpy(remote.sun_path, SOCK_PATH);
   len = strlen(remote.sun_path) + sizeof(remote.sun_family);
-  if (connect(s, (struct sockaddr *)&remote, len) == -1) {
+  if (__real_connect(s, (struct sockaddr *)&remote, len) == -1) {
     // XXX: Super kludge!
     // If we can't connect to daemon, assume it hasn't been
     // started yet and attempt to run it ourselves.
@@ -58,7 +57,7 @@ void connect_to_ipcd() {
     // badly in many situations, but works for now.
     if (errno == ENOENT || errno == ECONNREFUSED) {
       rename(PRELOAD_PATH, PRELOAD_TMP);
-      switch (fork()) {
+      switch (__real_fork()) {
       case -1:
         break;
       case 0:
@@ -73,7 +72,7 @@ void connect_to_ipcd() {
         sleep(1);
       }
       rename(PRELOAD_TMP, PRELOAD_PATH);
-      if (connect(s, (struct sockaddr *)&remote, len) == -1) {
+      if (__real_connect(s, (struct sockaddr *)&remote, len) == -1) {
         perror("connect-after-fork");
         exit(1);
       }

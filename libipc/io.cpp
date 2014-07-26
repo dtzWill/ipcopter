@@ -14,9 +14,9 @@
 #include "ipcopt.h"
 
 #include "debug.h"
-#include "ipcreg_internal.h"
-#include "socket_inline.h"
 #include "ipcd.h"
+#include "ipcreg_internal.h"
+#include "real.h"
 
 #include <cassert>
 #include <sched.h>
