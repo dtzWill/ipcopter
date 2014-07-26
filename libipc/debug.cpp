@@ -13,7 +13,11 @@
 
 #include "debug.h"
 
+#include "real.h"
+
 #include <assert.h>
+#include <fcntl.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -49,13 +53,26 @@ FILE *getlogfp() {
   sprintf(buf, pid_template, newmypid);
 
   logfp = fopen(buf, "a");
-
   // If unable to open log, attempt to print to stderr and bail
   if (!logfp) {
     fprintf(stderr, "Error opening log file!");
     abort();
   }
   fprintf(logfp, "Log file opened, pid=%d, oldpid=%d\n", newmypid, mypid);
+
+  // Set descriptor to close-on-exec
+  int fd = fileno(logfp);
+  int flags = __real_fcntl(fd, F_GETFD, /* kludge */ 0);
+  if (flags < 0) {
+    fprintf(stderr, "Unable to get flags for log fd!\n");
+    abort();
+  }
+  flags |= FD_CLOEXEC;
+  int ret = __real_fcntl(fd, F_SETFD, (void *)(uintptr_t)(unsigned)flags);
+  if (ret == -1) {
+    fprintf(stderr, "Unable to set FD_CLOEXEC flag on logging fd!\n");
+    abort();
+  }
 
   mypid = newmypid;
 
