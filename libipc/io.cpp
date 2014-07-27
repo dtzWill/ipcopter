@@ -72,6 +72,9 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
       // TODO: Async!
       endpoint remote;
       size_t attempts = 0;
+      remote = ipcd_endpoint_kludge(ep);
+      if (remote == EP_INVALID)
+        usleep(100000);
       while (((remote = ipcd_endpoint_kludge(ep)) == EP_INVALID) &&
              ++attempts < MAX_SYNC_ATTEMPTS) {
         sched_yield();
