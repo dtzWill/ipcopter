@@ -52,7 +52,15 @@ int do_ipc_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
       continue;
     newfds[i].fd = getInfo(getEP(fd)).localfd;
   }
-  return __real_poll(newfds, nfds, timeout);
+  int ret = __real_poll(newfds, nfds, timeout);
+
+  // Copy 'revents' back out from newfds,
+  // as written by 'poll':
+  for (nfds_t i = 0; i < nfds; ++i) {
+    fds[i].revents = newfds[i].revents;
+  }
+
+  return ret;
 }
 
 fd_set *copy_if_needed(fd_set *src, fd_set *copy, int nfds) {
@@ -102,6 +110,32 @@ fd_set *copy_if_needed(fd_set *src, fd_set *copy, int nfds) {
   return copy;
 }
 
+void select__copy_to_output(fd_set *out, fd_set*givenout, nfds_t nfds) {
+  // If they're the same, output was already written to givenout
+  if (out == givenout)
+    return;
+
+  int maxfd = std::min<int>(FD_SETSIZE, TABLE_SIZE);
+
+  // For each fd set in 'givenout', check if
+  // it or its optimized local version were set
+  // by select in the given 'out' set.
+  nfds_t fds_found = 0;
+  for (int fd = 0; fd < maxfd && fds_found < nfds; ++fd) {
+    if (!FD_ISSET(fd, givenout))
+      continue;
+    ++fds_found;
+    int equiv_fd = fd;
+    if (is_optimized_socket_safe(fd))
+      equiv_fd = getInfo(getEP(fd)).localfd;
+
+    // If the equivalent (local if exists) fd
+    // was not marked by select(), clear it here as well:
+    if (!FD_ISSET(equiv_fd, out))
+      FD_CLR(fd, givenout);
+  }
+}
+
 int do_ipc_pselect(int nfds, fd_set *readfds, fd_set *writefds,
                    fd_set *errorfds, const struct timespec *timeout,
                    const sigset_t *sigmask) {
@@ -113,7 +147,12 @@ int do_ipc_pselect(int nfds, fd_set *readfds, fd_set *writefds,
   fd_set *w = copy_if_needed(writefds, &wcopy, nfds);
   fd_set *e = copy_if_needed(errorfds, &ecopy, nfds);
 
-  return __real_pselect(nfds, r, w, e, timeout, sigmask);
+  int ret = __real_pselect(nfds, r, w, e, timeout, sigmask);
+  select__copy_to_output(r, readfds, nfds);
+  select__copy_to_output(w, writefds, nfds);
+  select__copy_to_output(e, errorfds, nfds);
+
+  return ret;
 }
 int do_ipc_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
                   struct timeval *timeout) {
@@ -125,7 +164,13 @@ int do_ipc_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
   fd_set *w = copy_if_needed(writefds, &wcopy, nfds);
   fd_set *e = copy_if_needed(errorfds, &ecopy, nfds);
 
-  return __real_select(nfds, r, w, e, timeout);
+  int ret = __real_select(nfds, r, w, e, timeout);
+
+  select__copy_to_output(r, readfds, nfds);
+  select__copy_to_output(w, writefds, nfds);
+  select__copy_to_output(e, errorfds, nfds);
+
+  return ret;
 }
 
 void set_local_nonblocking(int fd, bool nonblocking) {

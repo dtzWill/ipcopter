@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "debug.h"
+#include "ipcd.h"
 #include "ipcopt.h"
 #include "ipcreg_internal.h"
-#include "ipcd.h"
-#include "socket_inline.h"
+#include "real.h"
 #include "shm.h"
 
 #include <assert.h>
