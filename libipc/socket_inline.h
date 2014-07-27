@@ -18,6 +18,7 @@
 #include "debug.h"
 #include "ipcopt.h"
 #include "real.h"
+#include "init.h"
 
 #include <assert.h>
 
@@ -280,4 +281,7 @@ static inline int __internal_setsockopt(int socket, int level, int option_name,
 
   return ret;
 }
+
+int __attribute((used)) __only_include_once = 0;
+
 #endif // _SOCKET_INLINE_H_

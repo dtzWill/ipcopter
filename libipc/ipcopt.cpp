@@ -17,7 +17,6 @@
 #include "ipcreg_internal.h"
 #include "real.h"
 #include "shm.h"
-#include "init.h"
 
 #include <assert.h>
 #include <stdio.h>

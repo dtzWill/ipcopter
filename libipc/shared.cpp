@@ -13,8 +13,8 @@
 
 #include "getfromlibc.h"
 #include "socket_inline.h"
-#include "init.h"
 #include "wrapper.h"
+#include "system.h"
 
 #include <poll.h>
 #include <stdarg.h>
@@ -123,6 +123,12 @@ int shutdown(int sockfd, int how) { return __internal_shutdown(sockfd, how); }
 
 int socket(int domain, int type, int protocol) {
   return __internal_socket(domain, type, protocol);
+}
+
+// System
+pid_t fork(void) { return __internal_fork(); }
+int execve(const char *path, char *const argv[], char *const envp[]) {
+  return __internal_execve(path, argv, envp);
 }
 
 //===- Access to libc-backed versions -------------------------------------===//

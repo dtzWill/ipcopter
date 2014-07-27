@@ -13,7 +13,6 @@
 
 #include "debug.h"
 
-#include "init.h"
 #include "magic_socket_nums.h"
 #include "real.h"
 #include "rename_fd.h"

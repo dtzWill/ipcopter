@@ -14,7 +14,6 @@
 #include "ipcopt.h"
 
 #include "debug.h"
-#include "init.h"
 #include "ipcd.h"
 #include "ipcreg_internal.h"
 #include "real.h"

@@ -18,7 +18,6 @@
 #include "rename_fd.h"
 #include "magic_socket_nums.h"
 #include "lock.h"
-#include "init.h"
 
 #include <assert.h>
 #include <errno.h>

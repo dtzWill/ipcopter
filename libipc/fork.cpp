@@ -17,14 +17,13 @@
 
 #include "debug.h"
 #include "getfromlibc.h"
-#include "init.h"
+#include "system.h"
 #include "wrapper.h"
 
 BEGIN_EXTERN_C
 pid_t __real_fork(void) { CALL_REAL(fork); }
 
-pid_t fork(void) {
-
+pid_t __internal_fork(void) {
   // Re-registered all fd's before
   // passing to children.
   // This is bad, but makes it easy to avoid

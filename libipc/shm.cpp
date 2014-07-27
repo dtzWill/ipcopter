@@ -17,7 +17,6 @@
 #include "magic_socket_nums.h"
 #include "real.h"
 #include "rename_fd.h"
-#include "init.h"
 
 #include <sys/mman.h>
 #include <sys/stat.h>

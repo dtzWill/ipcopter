@@ -15,8 +15,8 @@
 
 #include "debug.h"
 #include "getfromlibc.h"
-#include "init.h"
 #include "shm.h"
+#include "system.h"
 #include "wrapper.h"
 
 EXTERN_C int __real_execve(const char *path, char *const argv[],
@@ -24,8 +24,8 @@ EXTERN_C int __real_execve(const char *path, char *const argv[],
   CALL_REAL(execve, path, argv, envp);
 }
 
-
-int execve(const char *path, char *const argv[], char *const envp[]) {
+int __internal_execve(const char *path, char *const argv[],
+                      char *const envp[]) {
   ipclog("execve called (path=%s)!\n", path);
 
   shm_state_save();
