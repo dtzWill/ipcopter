@@ -36,6 +36,16 @@ void __attribute__((constructor)) ipcopt_init() {
   shm_state_restore();
 }
 
+void __attribute__((destructor)) ipcopt_fini() {
+  for (unsigned i = 0; i < TABLE_SIZE; ++i)
+    if (is_optimized_socket_safe(i)) {
+      endpoint ep = getEP(i);
+      ipc_info &info = getInfo(ep);
+      ipclog("Optimized endpoint: ep=%d, fd=%d, localfd=%d, bytes_trans=%zu\n",
+             ep, i, info.localfd, info.bytes_trans);
+    }
+}
+
 void invalidate(endpoint ep) {
   ipc_info &i = getInfo(ep);
   assert(i.state != STATE_INVALID);

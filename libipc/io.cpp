@@ -48,7 +48,11 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
 
   // If localized, just use fast socket:
   if (i.state == STATE_OPTIMIZED) {
-    return IO(i.localfd, buf, count, flags);
+    ssize_t ret = IO(i.localfd, buf, count, flags);
+    if (ret != -1) {
+      i.bytes_trans += ret;
+    }
+    return ret;
   }
 
   // Otherwise, use original fd:
