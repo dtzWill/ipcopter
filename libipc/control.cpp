@@ -63,7 +63,7 @@ int do_ipc_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
   return ret;
 }
 
-fd_set *copy_if_needed(fd_set *src, fd_set *copy, int nfds) {
+fd_set *copy_if_needed(fd_set *src, fd_set *copy, int &nfds) {
   // Portable way to find fd's contained in the fd_set
   // More intrusive implementation would be much more efficient!
 
@@ -93,6 +93,7 @@ fd_set *copy_if_needed(fd_set *src, fd_set *copy, int nfds) {
   // Make second pass, copying into 'copy'
   // either original fd or the localfd for optimized connections.
   fds_found = 0;
+  int orig_nfds = nfds;
   for (int fd = 0; fd < maxfd && fds_found < nfds; ++fd) {
     if (!FD_ISSET(fd, src))
       continue;
@@ -104,13 +105,19 @@ fd_set *copy_if_needed(fd_set *src, fd_set *copy, int nfds) {
       int localfd = getInfo(getEP(fd)).localfd;
       assert(!FD_ISSET(fd, copy));
       FD_SET(localfd, copy);
+      // 'nfds' needs to be value of largest fd plus 1
+      nfds = std::max(localfd+1, nfds);
     }
   }
+
+  if (nfds != orig_nfds)
+    ipclog("In handling call to (p)select(), increased nfds: %d -> %d\n",
+           orig_nfds, nfds);
 
   return copy;
 }
 
-void select__copy_to_output(fd_set *out, fd_set*givenout, nfds_t nfds) {
+void select__copy_to_output(fd_set *out, fd_set*givenout, int nfds) {
   // If they're the same, output was already written to givenout
   if (out == givenout)
     return;
@@ -120,7 +127,7 @@ void select__copy_to_output(fd_set *out, fd_set*givenout, nfds_t nfds) {
   // For each fd set in 'givenout', check if
   // it or its optimized local version were set
   // by select in the given 'out' set.
-  nfds_t fds_found = 0;
+  int fds_found = 0;
   for (int fd = 0; fd < maxfd && fds_found < nfds; ++fd) {
     if (!FD_ISSET(fd, givenout))
       continue;
