@@ -206,6 +206,8 @@ static inline int __internal_dup(int fd) {
   }
   assert(!is_protected_fd(fd));
   int ret = __real_dup(fd);
+  // ipclog("dup(fd=%d (%d)) = %d (%d)\n", fd, is_registered_socket(fd),
+  //        ret, is_registered_socket(ret));
 
   if (is_registered_socket(fd)) {
     dup_inet_socket(fd, ret);
@@ -221,6 +223,8 @@ static inline int __internal_dup2(int fd1, int fd2) {
     errno = EBADF;
     return -1;
   }
+  // ipclog("dup2(fd1=%d (%d), fd2=%d (%d))\n", fd1, is_registered_socket(fd1),
+  //        fd2, is_registered_socket(fd2));
   int ret = __real_dup2(fd1, fd2);
 
   dup_inet_socket(fd1, fd2);
