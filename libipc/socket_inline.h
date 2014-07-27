@@ -109,8 +109,12 @@ static inline int __internal_accept(int fd, struct sockaddr *addr,
   int ret = __real_accept(fd, addr, addrlen);
   if (is_registered_socket(fd)) {
     ipclog("accept(%d) -> %d\n", fd, ret);
-    if (ret != -1)
+    if (ret != -1) {
       register_inet_socket(ret);
+      // TODO: Intercept accept4() and check for flags specifying these.
+      set_cloexec(ret, false);
+      set_nonblocking(ret, false);
+    }
   }
   return ret;
 }

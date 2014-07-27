@@ -111,7 +111,9 @@ void unregister_inet_socket(int fd) {
 
   assert(i.ref_count > 0);
   // FD no longer refers to this endpoint!
-  getEP(fd) = EP_INVALID;
+  fd_info &f = getFDInfo(fd);
+  f.EP = EP_INVALID;
+  f.close_on_exec = false;
   if (--i.ref_count == 0) {
     // Last reference to this endpoint,
     // tell ipcd we're done with it.
