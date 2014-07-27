@@ -1,25 +1,22 @@
-* More hooks: 
-  * getsockopt/setsockopt
-  * fcntl
-  * ioctl
-  * getsockname/getpeername
-  * select/poll
-  * dup2
-* Better handling of signals?
-  * What if ALARM occurs while connceting to ipcd or something?
-* exec handling
-	* exec() will clear out our state!
-* fork() handling
-	* Common pattern is to accept client connections
-		(generating new fd for client), fork()'ing a new
-		child process to handle it (fd inherited to child),
-		and closing it in the parent.  Unfortunately closing
-		presently unregisters the endpoint ID we have,
-		which is a problem since child thinks it is still
-		a registered endpoint.
-		* Track set of processes with fd open still?
-			* ref-counting likely sufficient, but
-			  tracking set might be easier to debug failures.
-		* Similar problem to dup2() within same process,
-		  especially considering treatment of close()
-			on the descriptor.
+Important:
+[ ] Endpoint detection
+
+Hooks:
+[X] getsockopt/setsockopt
+  \-> Don't do much here, review?
+[X] fcntl
+[ ] ioctl
+[ ] getsockname/getpeername
+[X] select/poll/pselect
+[X] dup2
+[X] exec handling
+[X] fork() handling
+[ ] readv/writev
+
+
+Wishlist:
+[ ] Better handling of signals
+  \-> Ensure signal behavior of our intercepted methods is same
+  \-> For example, SIGALRM during internal call should reach user...
+[ ] Proper behavior for non-blocking sockets
+  \-> Ensure our various internal operations don't block app unexpectedly
