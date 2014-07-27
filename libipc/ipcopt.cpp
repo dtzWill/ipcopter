@@ -38,12 +38,18 @@ void __attribute__((constructor)) ipcopt_init() {
 
 void __attribute__((destructor)) ipcopt_fini() {
   for (unsigned i = 0; i < TABLE_SIZE; ++i)
-    if (is_optimized_socket_safe(i)) {
+    if (is_registered_socket(i)) {
       endpoint ep = getEP(i);
       ipc_info &info = getInfo(ep);
-      ipclog("Optimized endpoint: ep=%d, fd=%d, localfd=%d, bytes_trans=%zu\n",
-             ep, i, info.localfd, info.bytes_trans);
+      if (is_optimized_socket_safe(i)) {
+        ipclog("Optimized endpoint: ep=%d, fd=%d, localfd=%d, bytes_trans=%zu\n",
+               ep, i, info.localfd, info.bytes_trans);
+      } else
+        ipclog("Normal endpoint: ep=%d, fd=%d, bytes_trans=%zu\n",
+               ep, i, info.bytes_trans);
+
     }
+
 }
 
 void invalidate(endpoint ep) {
