@@ -106,7 +106,7 @@ static inline ssize_t __internal_write(int fd, const void *buf, size_t count) {
 
 static inline int __internal_accept4(int fd, struct sockaddr *addr,
                                      socklen_t *addrlen, int flags) {
-  int ret = __real_accept(fd, addr, addrlen);
+  int ret = __real_accept4(fd, addr, addrlen, flags);
   if (is_registered_socket(fd)) {
     ipclog("accept/accept4(fd=%d, flags=%d) -> %d\n", fd, flags, ret);
     if (ret != -1) {

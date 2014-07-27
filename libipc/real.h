@@ -36,7 +36,8 @@ EXTERN_C ssize_t __real_sendto(int fd, const void *message, size_t length,
                                socklen_t dest_len);
 EXTERN_C ssize_t __real_read(int fd, void *buf, size_t count);
 EXTERN_C ssize_t __real_write(int fd, const void *buf, size_t count);
-EXTERN_C int __real_accept(int fd, struct sockaddr *addr, socklen_t *addrlen);
+EXTERN_C int __real_accept4(int fd, struct sockaddr *addr, socklen_t *addrlen,
+                            int flags);
 EXTERN_C int __real_bind(int fd, const struct sockaddr *addr,
                          socklen_t addrlen);
 EXTERN_C int __real_connect(int fd, const struct sockaddr *addr,
