@@ -31,9 +31,22 @@ void invalidateEPMap() {
     state.FDMap[i].EP = EP_INVALID;
 }
 
+void scan_for_cloexec() {
+  for (unsigned i = 0; i < TABLE_SIZE; ++i) {
+    fd_info &f = getFDInfo(i);
+    if (valid_ep(f.EP) && f.close_on_exec) {
+      // This fd is actually already closed!
+
+      // Unregister it, closing localfd as needed...
+      unregister_inet_socket(i);
+    }
+  }
+}
+
 void __ipcopt_init() {
   invalidateEPMap();
   shm_state_restore();
+  scan_for_cloexec();
 }
 
 void __attribute__((destructor)) ipcopt_fini() {
