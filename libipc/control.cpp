@@ -80,6 +80,8 @@ fd_set *copy_if_needed(fd_set *src, fd_set *copy, int nfds) {
   if (!need_copy)
     return src;
 
+  FD_ZERO(copy);
+
   // Make second pass, copying into 'copy'
   // either original fd or the localfd for optimized connections.
   fds_found = 0;
