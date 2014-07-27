@@ -25,6 +25,11 @@ RUN sed --in-place=.bak 's/without-password/yes/' /etc/ssh/sshd_config
 # ssh needs this directory
 RUN mkdir -p /var/run/sshd
 
+ENV HOME /root/
+
+# Generate key and install into authorized_keys
+RUN mkdir /root/.ssh && chmod 700 /root/.ssh && ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa && cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+
 # More software
 RUN apt-get install -y pv netcat
 
