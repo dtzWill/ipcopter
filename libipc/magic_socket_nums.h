@@ -14,10 +14,10 @@
 #ifndef _MAGIC_SOCKET_NUMS_H_
 #define _MAGIC_SOCKET_NUMS_H_
 
-const int MAGIC_SOCKET_FD = 112233;
+const int MAGIC_SOCKET_FD = 999;
 
-const int MAGIC_LOGGING_FD = 12345;
+const int MAGIC_LOGGING_FD = 998;
 
-const int MAGIC_SHM_FD = 54321;
+const int MAGIC_SHM_FD = 997;
 
 #endif // _MAGIC_SOCKET_NUMS_H_
