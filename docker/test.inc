@@ -7,6 +7,7 @@ DISABLE_CMD="rm /etc/ld.so.preload"
 DISABLE_CMD="$DISABLE_CMD && rm /bin/ipcd /lib/libipc.so"
 DISABLE_CMD="$DISABLE_CMD && rm /tmp/ipcd.sock"
 
+function bench_normal() {
 echo
 echo
 echo "========================================="
@@ -16,13 +17,22 @@ docker run --rm -i $TAG /bin/bash <<EOF
 $DISABLE_CMD
 $TEST_CMD
 EOF
+}
 
+function bench_opt() {
 echo
 echo
 echo "========================================="
-echo "And now with our tech:"
+echo "Running *with* our IPCD tech:"
 echo "-----------------------------------------"
 docker run --rm -i $TAG /bin/bash <<EOF
 $TEST_CMD
 EOF
+}
 
+bench_normal
+bench_opt
+bench_normal
+bench_opt
+bench_normal
+bench_opt
