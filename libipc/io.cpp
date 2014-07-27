@@ -22,7 +22,10 @@
 #include <sched.h>
 
 const size_t TRANS_THRESHOLD = 1ULL << 20;
-const size_t MAX_SYNC_ATTEMPTS = 5;
+const size_t MAX_SYNC_ATTEMPTS = 20;
+const size_t MILLIS_IN_MICROSECONDS = 1000;
+const size_t IPCD_SYNC_DELAY = 100 * MILLIS_IN_MICROSECONDS;
+const size_t ATTEMPT_SLEEP_INTERVAL = IPCD_SYNC_DELAY / MAX_SYNC_ATTEMPTS;
 
 void copy_bufsize(int src, int dst, int buftype) {
   int bufsize;
@@ -72,12 +75,10 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
       // TODO: Async!
       endpoint remote;
       size_t attempts = 0;
-      remote = ipcd_endpoint_kludge(ep);
-      if (remote == EP_INVALID)
-        usleep(100000);
       while (((remote = ipcd_endpoint_kludge(ep)) == EP_INVALID) &&
              ++attempts < MAX_SYNC_ATTEMPTS) {
         sched_yield();
+        usleep(ATTEMPT_SLEEP_INTERVAL);
       }
 
       if (valid_ep(remote)) {
