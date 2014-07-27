@@ -23,6 +23,7 @@ extern "C" {
 #include <unistd.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 
 // Initialization
 void __ipcopt_init();
@@ -50,6 +51,7 @@ ssize_t do_ipc_sendto(int fd, const void *message, size_t length, int flags,
                       const struct sockaddr *dest_addr, socklen_t dest_len);
 ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
                         struct sockaddr *address, socklen_t *address_len);
+ssize_t do_ipc_writev(int fd, const struct iovec *iov, int iovcnt);
 
 int do_ipc_poll(struct pollfd fds[], nfds_t nfds, int timeout);
 int do_ipc_pselect(int nfds, fd_set *readfds, fd_set *writefds,

@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/uio.h>
 
 static inline int __internal_socket(int domain, int type, int protocol) {
   int fd = __real_socket(domain, type, protocol);
@@ -101,6 +102,15 @@ static inline ssize_t __internal_write(int fd, const void *buf, size_t count) {
     ret = __real_write(fd, buf, count);
   else
     ret = do_ipc_send(fd, buf, count, 0);
+  return ret;
+}
+
+static inline ssize_t __internal_writev(int fd, const struct iovec *iov, int iovcnt) {
+  ssize_t ret;
+  if (!is_registered_socket(fd))
+    ret = __real_writev(fd, iov, iovcnt);
+  else
+    ret = do_ipc_writev(fd, iov, iovcnt);
   return ret;
 }
 

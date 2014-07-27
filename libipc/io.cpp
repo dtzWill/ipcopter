@@ -18,8 +18,12 @@
 #include "ipcreg_internal.h"
 #include "real.h"
 
+#include <algorithm>
 #include <cassert>
+#include <limits.h>
 #include <sched.h>
+#include <stdlib.h>
+#include <string.h>
 
 const size_t TRANS_THRESHOLD = 1ULL << 20;
 const size_t MAX_SYNC_ATTEMPTS = 20;
@@ -143,4 +147,42 @@ ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
 
   // As a bonus from the above check, we can forward to plain recv()
   return do_ipc_recv(fd, buffer, length, flags);
+}
+
+ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
+  // TODO: Use alloca for small sizes
+  // Based on implementation found here:
+  // http://www.oschina.net/code/explore/glibc-2.9/sysdeps/posix/writev.c
+
+  size_t bytes = 0;
+  for (int i = 0; i < count; ++i) {
+    // Overflow check...
+    if (SSIZE_MAX - bytes < vec[i].iov_len) {
+      // We could try to set errno here,
+      // but easier to just let actual writev do this:
+      return __real_writev(fd, vec, count);
+    }
+
+    bytes += vec[i].iov_len;
+  }
+
+  char *buffer = (char *)malloc(bytes);
+  assert(buffer);
+
+  char *bp = buffer;
+  size_t to_copy = bytes;
+  for (int i = 0; i < count; ++i) {
+    size_t copy = std::min(vec[i].iov_len, to_copy);
+
+    bp = (char *)mempcpy((void *)bp, (void *)vec[i].iov_base, copy);
+    to_copy -= copy;
+    if (to_copy == 0)
+      break;
+  }
+
+  ssize_t ret = do_ipc_send(fd, buffer, bytes, 0);
+
+  free(buffer);
+
+  return ret;
 }
