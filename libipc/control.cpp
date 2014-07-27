@@ -110,9 +110,11 @@ fd_set *copy_if_needed(fd_set *src, fd_set *copy, int &nfds) {
     }
   }
 
-  if (nfds != orig_nfds)
-    ipclog("In handling call to (p)select(), increased nfds: %d -> %d\n",
-           orig_nfds, nfds);
+  if (false) {
+    if (nfds != orig_nfds)
+      ipclog("In handling call to (p)select(), increased nfds: %d -> %d\n",
+             orig_nfds, nfds);
+  }
 
   return copy;
 }
