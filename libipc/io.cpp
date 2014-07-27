@@ -150,10 +150,25 @@ ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
 }
 
 ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
-  // TODO: Use alloca for small sizes
+  // TODO: Use alloca for small sizes?
   // Based on implementation found here:
   // http://www.oschina.net/code/explore/glibc-2.9/sysdeps/posix/writev.c
 
+  ipc_info &i = getInfo(getEP(fd));
+  assert(i.state != STATE_INVALID);
+
+  // If localized, just use fast socket!
+  if (i.state == STATE_OPTIMIZED) {
+    ssize_t ret = __real_writev(i.localfd, vec, count);
+    if (ret != -1) {
+      i.bytes_trans += ret;
+    }
+    return ret;
+  }
+
+  // TODO: Don't buffer more than we have left to THRESHOLD
+  // Data after this point won't be used in this call anyway,
+  // and will let THRESHOLD be worst-case buffering scenario.
   size_t bytes = 0;
   for (int i = 0; i < count; ++i) {
     // Overflow check...
