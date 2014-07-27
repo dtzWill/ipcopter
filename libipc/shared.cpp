@@ -59,7 +59,11 @@ ssize_t write(int fd, const void *buf, size_t count) {
 // Control calls
 
 int accept(int fd, struct sockaddr *addr, socklen_t *addrlen) {
-  return __internal_accept(fd, addr, addrlen);
+  return __internal_accept4(fd, addr, addrlen, 0);
+}
+
+int accept4(int fd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
+  return __internal_accept4(fd, addr, addrlen, flags);
 }
 
 int bind(int fd, const struct sockaddr *addr, socklen_t addrlen) {
@@ -163,8 +167,9 @@ ssize_t __real_write(int fd, const void *buf, size_t count) {
 
 // Control
 
-int __real_accept(int fd, struct sockaddr *addr, socklen_t *addrlen) {
-  CALL_REAL(accept, fd, addr, addrlen);
+int __real_accept4(int fd, struct sockaddr *addr, socklen_t *addrlen,
+                   int flags) {
+  CALL_REAL(accept4, fd, addr, addrlen, flags);
 }
 
 int __real_bind(int fd, const struct sockaddr *addr, socklen_t addrlen) {

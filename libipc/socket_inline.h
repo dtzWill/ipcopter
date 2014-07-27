@@ -104,16 +104,15 @@ static inline ssize_t __internal_write(int fd, const void *buf, size_t count) {
   return ret;
 }
 
-static inline int __internal_accept(int fd, struct sockaddr *addr,
-                                    socklen_t *addrlen) {
+static inline int __internal_accept4(int fd, struct sockaddr *addr,
+                                     socklen_t *addrlen, int flags) {
   int ret = __real_accept(fd, addr, addrlen);
   if (is_registered_socket(fd)) {
-    ipclog("accept(%d) -> %d\n", fd, ret);
+    ipclog("accept/accept4(fd=%d, flags=%d) -> %d\n", fd, flags, ret);
     if (ret != -1) {
       register_inet_socket(ret);
-      // TODO: Intercept accept4() and check for flags specifying these.
-      set_cloexec(ret, false);
-      set_nonblocking(ret, false);
+      set_nonblocking(ret, (flags & SOCK_NONBLOCK) != 0);
+      set_cloexec(ret, (flags & SOCK_CLOEXEC) != 0);
     }
   }
   return ret;
