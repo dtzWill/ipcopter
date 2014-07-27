@@ -24,6 +24,9 @@ extern "C" {
 #include <sys/select.h>
 #include <sys/socket.h>
 
+// Initialization
+void __ipcopt_init();
+
 // FD registration
 void register_inet_socket(int fd);
 char is_registered_socket(int fd);

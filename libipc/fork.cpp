@@ -15,9 +15,10 @@
 
 #include "ipcopt.h"
 
-#include "getfromlibc.h"
-#include "wrapper.h"
 #include "debug.h"
+#include "getfromlibc.h"
+#include "init.h"
+#include "wrapper.h"
 
 BEGIN_EXTERN_C
 pid_t __real_fork(void) { CALL_REAL(fork); }

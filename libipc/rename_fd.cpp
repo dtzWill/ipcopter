@@ -16,6 +16,7 @@
 #include "rename_fd.h"
 
 #include "real.h"
+#include "init.h"
 
 #include <assert.h>
 #include <fcntl.h>

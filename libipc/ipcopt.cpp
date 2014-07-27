@@ -17,6 +17,7 @@
 #include "ipcreg_internal.h"
 #include "real.h"
 #include "shm.h"
+#include "init.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -31,7 +32,7 @@ void invalidateEPMap() {
     state.FDMap[i].EP = EP_INVALID;
 }
 
-void __attribute__((constructor)) ipcopt_init() {
+void __ipcopt_init() {
   invalidateEPMap();
   shm_state_restore();
 }

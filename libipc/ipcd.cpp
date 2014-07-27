@@ -17,6 +17,8 @@
 #include "real.h"
 #include "rename_fd.h"
 #include "magic_socket_nums.h"
+#include "lock.h"
+#include "init.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -38,6 +40,11 @@ const char *IPCD_BIN_PATH = "/bin/ipcd";
 
 const char *PRELOAD_PATH = "/etc/ld.so.preload";
 const char *PRELOAD_TMP = "/tmp/preload.cfg";
+
+SimpleLock &getConnectLock() {
+  static SimpleLock ConnectLock;
+  return ConnectLock;
+}
 
 void connect_to_ipcd() {
   int s, len;
@@ -93,7 +100,7 @@ void connect_to_ipcd() {
   ipcd_socket = s;
 }
 
-void __attribute__((constructor)) ipcd_init() {
+void __ipcd_init() {
   assert(ipcd_socket == 0);
   connect_to_ipcd();
 }
@@ -130,20 +137,6 @@ void __attribute__((destructor)) ipcd_dtor() {
   assert(success && "Unable to unregister all fd's");
 }
 
-static volatile int connect_lock = 0;
-void ipcd_lock() {
-  while (__sync_lock_test_and_set(&connect_lock, 1)) {
-    // wait
-  };
-}
-
-void ipcd_unlock() { __sync_lock_release(&connect_lock); }
-
-struct IPCLock {
-  IPCLock() { ipcd_lock(); }
-  ~IPCLock() { ipcd_unlock(); }
-};
-
 void connect_if_needed() {
   if (mypid == getpid())
     return;
@@ -154,7 +147,7 @@ void connect_if_needed() {
 }
 
 endpoint ipcd_register_socket(int fd) {
-  IPCLock L;
+  ScopedLock L(getConnectLock());
   connect_if_needed();
 
   char buf[100];
@@ -184,7 +177,7 @@ endpoint ipcd_register_socket(int fd) {
 }
 
 bool ipcd_localize(endpoint local, endpoint remote) {
-  IPCLock L;
+  ScopedLock L(getConnectLock());
   connect_if_needed();
 
   char buf[100];
@@ -203,7 +196,7 @@ bool ipcd_localize(endpoint local, endpoint remote) {
 
 // GETLOCALFD
 int ipcd_getlocalfd(endpoint local) {
-  IPCLock L;
+  ScopedLock L(getConnectLock());
   connect_if_needed();
 
   char buf[100];
@@ -257,7 +250,7 @@ int ipcd_getlocalfd(endpoint local) {
 
 // UNREGISTER
 bool ipcd_unregister_socket(endpoint ep) {
-  IPCLock L;
+  ScopedLock L(getConnectLock());
   connect_if_needed();
 
   char buf[100];
@@ -276,7 +269,7 @@ bool ipcd_unregister_socket(endpoint ep) {
 
 // REREGISTER
 bool ipcd_reregister_socket(endpoint ep, int fd) {
-  IPCLock L;
+  ScopedLock L(getConnectLock());
   connect_if_needed();
 
   char buf[100];
@@ -294,7 +287,7 @@ bool ipcd_reregister_socket(endpoint ep, int fd) {
 }
 
 endpoint ipcd_endpoint_kludge(endpoint local) {
-  IPCLock L;
+  ScopedLock L(getConnectLock());
   connect_if_needed();
 
   char buf[100];

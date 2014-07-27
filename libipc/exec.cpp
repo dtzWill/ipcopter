@@ -15,6 +15,7 @@
 
 #include "debug.h"
 #include "getfromlibc.h"
+#include "init.h"
 #include "shm.h"
 #include "wrapper.h"
 

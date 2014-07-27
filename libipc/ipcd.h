@@ -20,6 +20,9 @@ typedef uint32_t endpoint;
 
 const endpoint EP_INVALID = ~endpoint(0);
 
+// Initialize connection
+void __ipcd_init();
+
 // REGISTER
 endpoint ipcd_register_socket(int fd);
 
