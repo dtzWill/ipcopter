@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "epoll.h"
 #include "getfromlibc.h"
 #include "socket_inline.h"
 #include "wrapper.h"
@@ -139,6 +140,23 @@ int execve(const char *path, char *const argv[], char *const envp[]) {
   return __internal_execve(path, argv, envp);
 }
 
+// epoll
+
+int epoll_create(int size) { return __internal_epoll_create(size); }
+
+int epoll_create1(int flags) { return __internal_epoll_create1(flags); }
+int epoll_wait(int epfd, struct epoll_event *events, int maxevents,
+               int timeout) {
+  return __internal_epoll_pwait(epfd, events, maxevents, timeout, 0);
+}
+int epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
+                int timeout, const sigset_t *sigmask) {
+  return __internal_epoll_pwait(epfd, events, maxevents, timeout, sigmask);
+}
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
+  return __internal_epoll_ctl(epfd, op, fd, event);
+}
+
 //===- Access to libc-backed versions -------------------------------------===//
 
 // Data
@@ -228,6 +246,18 @@ int __real_shutdown(int sockfd, int how) { CALL_REAL(shutdown, sockfd, how); }
 
 int __real_socket(int domain, int type, int protocol) {
   CALL_REAL(socket, domain, type, protocol);
+}
+
+// epoll
+
+int __real_epoll_create(int size) { CALL_REAL(epoll_create, size); }
+int __real_epoll_create1(int flags) { CALL_REAL(epoll_create1, flags); }
+int __real_epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
+                       int timeout, const sigset_t *sigmask) {
+  CALL_REAL(epoll_pwait, epfd, events, maxevents, timeout, sigmask);
+}
+int __real_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
+  CALL_REAL(epoll_ctl, epfd, op, fd, event);
 }
 
 END_EXTERN_C

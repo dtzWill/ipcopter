@@ -18,6 +18,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <sys/epoll.h>
 
 #ifdef __cplusplus
 #define EXTERN_C extern "C"
@@ -66,4 +67,15 @@ EXTERN_C int __real_select(int nfds, fd_set *readfds, fd_set *writefds,
                            fd_set *errorfds, struct timeval *timeout);
 EXTERN_C int __real_setsockopt(int socket, int level, int option_name,
                                const void *option_value, socklen_t option_len);
+
+// epoll
+
+EXTERN_C int __real_epoll_create(int size);
+EXTERN_C int __real_epoll_create1(int flags);
+EXTERN_C int __real_epoll_pwait(int epfd, struct epoll_event *events,
+                                int maxevents, int timeout,
+                                const sigset_t *sigmask);
+EXTERN_C int __real_epoll_ctl(int epfd, int op, int fd,
+                              struct epoll_event *event);
+
 #endif // _REAL_H_
