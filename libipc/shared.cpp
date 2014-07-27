@@ -11,8 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "socket_inline.h"
 #include "getfromlibc.h"
+#include "shm.h"
+#include "socket_inline.h"
 #include "wrapper.h"
 
 #include <poll.h>
@@ -21,6 +22,10 @@
 BEGIN_EXTERN_C
 
 #define RESTRICT
+
+void __attribute__((constructor)) shared_init() {
+  shm_state_restore();
+}
 
 // Data calls
 
