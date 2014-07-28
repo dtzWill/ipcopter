@@ -46,7 +46,7 @@ typedef struct {
 
 // For now, just index directly into pre-allocate table with fd.
 // We will also need a way to go from nonce to fd!
-const unsigned TABLE_SIZE = 1 << 10;
+const unsigned TABLE_SIZE = 1 << 14;
 typedef struct {
   fd_info FDMap[TABLE_SIZE];
   ipc_info EndpointInfo[TABLE_SIZE];
