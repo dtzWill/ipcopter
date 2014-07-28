@@ -56,7 +56,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
   // If localized, just use fast socket:
   if (i.state == STATE_OPTIMIZED) {
     ssize_t ret = IO(i.localfd, buf, count, flags);
-    if (ret != -1) {
+    if (ret != -1 && !(flags & MSG_PEEK)) {
       i.bytes_trans += ret;
     }
     return ret;
@@ -67,7 +67,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
   if (rem > 0 && size_t(rem) <= count) {
     ssize_t ret = IO(fd, buf, rem, flags);
 
-    if (ret == -1) {
+    if (ret == -1 || (flags & MSG_PEEK)) {
       return ret;
     }
 
@@ -108,7 +108,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
   // We don't handle other states yet
   assert(i.state == STATE_UNOPT);
 
-  if (ret == -1)
+  if (ret == -1 || (flags & MSG_PEEK))
     return ret;
 
   // Successful operation, add to running total.
