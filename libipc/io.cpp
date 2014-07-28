@@ -45,6 +45,39 @@ void copy_bufsizes(int src, int dst) {
   copy_bufsize(src, dst, SO_SNDBUF);
 }
 
+void attempt_optimization(int fd) {
+  endpoint ep = getEP(fd);
+  assert(valid_ep(ep));
+  ipc_info &i = getInfo(ep);
+  assert(i.state != STATE_INVALID);
+
+  if (i.bytes_trans == TRANS_THRESHOLD) {
+    ipclog("Completed partial operation to sync at THRESHOLD for fd=%d!\n", fd);
+    // TODO: Async!
+    endpoint remote;
+    size_t attempts = 0;
+    while (((remote = ipcd_endpoint_kludge(ep)) == EP_INVALID) &&
+           ++attempts < MAX_SYNC_ATTEMPTS) {
+      sched_yield();
+      usleep(ATTEMPT_SLEEP_INTERVAL);
+    }
+
+    if (valid_ep(remote)) {
+      ipclog("Found remote endpoint! Local=%d, Remote=%d Attempts=%zu!\n", ep,
+             remote, attempts);
+
+      bool success = ipcd_localize(ep, remote);
+      assert(success && "Failed to localize! Sadtimes! :(");
+      i.localfd = getlocalfd(fd);
+      i.state = STATE_OPTIMIZED;
+
+      // Configure localfd
+      copy_bufsizes(fd, i.localfd);
+      set_local_nonblocking(fd, i.non_blocking);
+    }
+  }
+}
+
 typedef ssize_t (*IOFunc)(...);
 
 template <typename buf_t>
@@ -73,32 +106,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
 
     i.bytes_trans += ret;
 
-    if (i.bytes_trans == TRANS_THRESHOLD) {
-      ipclog("Completed partial operation to sync at THRESHOLD for fd=%d!\n",
-             fd);
-      // TODO: Async!
-      endpoint remote;
-      size_t attempts = 0;
-      while (((remote = ipcd_endpoint_kludge(ep)) == EP_INVALID) &&
-             ++attempts < MAX_SYNC_ATTEMPTS) {
-        sched_yield();
-        usleep(ATTEMPT_SLEEP_INTERVAL);
-      }
-
-      if (valid_ep(remote)) {
-        ipclog("Found remote endpoint! Local=%d, Remote=%d Attempts=%zu!\n", ep,
-               remote, attempts);
-
-        bool success = ipcd_localize(ep, remote);
-        assert(success && "Failed to localize! Sadtimes! :(");
-        i.localfd = getlocalfd(fd);
-        i.state = STATE_OPTIMIZED;
-
-        // Configure localfd
-        copy_bufsizes(fd, i.localfd);
-        set_local_nonblocking(fd, i.non_blocking);
-      }
-    }
+    attempt_optimization(fd);
 
     return ret;
   }
@@ -166,9 +174,6 @@ ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
     return ret;
   }
 
-  // TODO: Don't buffer more than we have left to THRESHOLD
-  // Data after this point won't be used in this call anyway,
-  // and will let THRESHOLD be worst-case buffering scenario.
   size_t bytes = 0;
   for (int i = 0; i < count; ++i) {
     // Overflow check...
@@ -181,23 +186,30 @@ ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
     bytes += vec[i].iov_len;
   }
 
-  char *buffer = (char *)malloc(bytes);
-  assert(buffer);
+  ssize_t rem = (TRANS_THRESHOLD - i.bytes_trans);
+  if (rem > 0 && size_t(rem) <= size_t(count)) {
+    ssize_t ret = __real_writev(fd, vec, rem);
 
-  char *bp = buffer;
-  size_t to_copy = bytes;
-  for (int i = 0; i < count; ++i) {
-    size_t copy = std::min(vec[i].iov_len, to_copy);
+    if (ret == -1)
+      return ret;
 
-    bp = (char *)mempcpy((void *)bp, (void *)vec[i].iov_base, copy);
-    to_copy -= copy;
-    if (to_copy == 0)
-      break;
+    i.bytes_trans += ret;
+
+    attempt_optimization(fd);
+
+    return ret;
   }
 
-  ssize_t ret = do_ipc_send(fd, buffer, bytes, 0);
+  ssize_t ret = __real_writev(fd, vec, count);
 
-  free(buffer);
+  // We don't handle other states yet
+  assert(i.state == STATE_UNOPT);
+
+  if (ret == -1)
+    return ret;
+
+  // Successful operation, add to running total.
+  i.bytes_trans += ret;
 
   return ret;
 }
