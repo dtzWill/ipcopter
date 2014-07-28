@@ -67,8 +67,12 @@ int __internal_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
   // Intercept uses of optimized fd's, replace with local ones.
   // TODO: How to handle epoll of an fd optimized after it's added?
   if (is_optimized_socket_safe(fd)) {
-    ipclog("epoll_ctl() on optimized fd %d!\n", fd);
-    return __real_epoll_ctl(epfd, op, getInfo(getEP(fd)).localfd, event);
+    int localfd = getInfo(getEP(fd)).localfd;
+    if (false) {
+      ipclog("epoll_ctl(epfd=%d, op=%d) on optimized fd %d (localfd %d)!\n",
+             epfd, op, fd, localfd);
+    }
+    return __real_epoll_ctl(epfd, op, localfd, event);
   }
   return __real_epoll_ctl(epfd, op, fd, event);
 }
