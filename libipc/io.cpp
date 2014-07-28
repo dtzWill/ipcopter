@@ -187,8 +187,25 @@ ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
   }
 
   ssize_t rem = (TRANS_THRESHOLD - i.bytes_trans);
-  if (rem > 0 && size_t(rem) <= size_t(count)) {
-    ssize_t ret = __real_writev(fd, vec, rem);
+  if (rem > 0 && size_t(rem) <= bytes) {
+
+    // Need to construct alternate iovec!
+    iovec newvec[100];
+    assert(100 > count);
+
+    int newcount = 0;
+    for (; newcount < count && rem != 0; ++newcount) {
+      int copy = std::min(size_t(rem), vec[newcount].iov_len);
+
+      // Put this iov into our newvec
+      newvec[newcount].iov_base = vec[newcount].iov_base;
+      newvec[newcount].iov_len = copy;
+
+      rem -= copy;
+    }
+    assert(rem == 0);
+
+    ssize_t ret = __real_writev(fd, newvec, newcount);
 
     if (ret == -1)
       return ret;
