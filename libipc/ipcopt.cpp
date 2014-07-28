@@ -127,6 +127,10 @@ void unregister_inet_socket(int fd) {
       assert(i.state == STATE_OPTIMIZED);
       __real_close(i.localfd);
 
+      ipclog("Closing optimized endpoint: ep=%d, fd=%d, localfd=%d, "
+             "bytes_trans=%zu\n",
+             ep, fd, i.localfd, i.bytes_trans);
+
       bool &isLocal = is_local(i.localfd);
       // Consistency check
       assert(isLocal);

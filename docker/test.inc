@@ -27,7 +27,7 @@ echo "Running *with* our IPCD tech:"
 echo "-----------------------------------------"
 docker run --rm -i $TAG /bin/bash <<EOF
 $TEST_CMD
-grep Optimized /tmp/ipcd.*.log
+grep -i optimized /tmp/ipcd.*.log
 EOF
 }
 
