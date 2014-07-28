@@ -105,12 +105,23 @@ static inline ssize_t __internal_write(int fd, const void *buf, size_t count) {
   return ret;
 }
 
-static inline ssize_t __internal_writev(int fd, const struct iovec *iov, int iovcnt) {
+static inline ssize_t __internal_writev(int fd, const struct iovec *iov,
+                                        int iovcnt) {
   ssize_t ret;
   if (!is_registered_socket(fd))
     ret = __real_writev(fd, iov, iovcnt);
   else
     ret = do_ipc_writev(fd, iov, iovcnt);
+  return ret;
+}
+
+static inline ssize_t __internal_readv(int fd, const struct iovec *iov,
+                                       int iovcnt) {
+  ssize_t ret;
+  if (!is_registered_socket(fd))
+    ret = __real_readv(fd, iov, iovcnt);
+  else
+    ret = do_ipc_readv(fd, iov, iovcnt);
   return ret;
 }
 

@@ -61,6 +61,10 @@ ssize_t writev(int fd, const struct iovec *iov, int iovcnt) {
   return __internal_writev(fd, iov, iovcnt);
 }
 
+ssize_t readv(int fd, const struct iovec *iov, int iovcnt) {
+  return __internal_readv(fd, iov, iovcnt);
+}
+
 // Control calls
 
 int accept(int fd, struct sockaddr *addr, socklen_t *addrlen) {
@@ -189,6 +193,10 @@ ssize_t __real_write(int fd, const void *buf, size_t count) {
 
 ssize_t __real_writev(int fd, const struct iovec *iov, int iovcnt) {
   CALL_REAL(writev, fd, iov, iovcnt);
+}
+
+ssize_t __real_readv(int fd, const struct iovec *iov, int iovcnt) {
+  CALL_REAL(readv, fd, iov, iovcnt);
 }
 
 // Control

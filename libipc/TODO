@@ -11,7 +11,7 @@ Hooks:
 [X] dup2
 [X] exec handling
 [X] fork() handling
-[ ] readv/writev
+[X] readv/writev
 
 
 Wishlist:

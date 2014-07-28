@@ -157,17 +157,16 @@ ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
   return do_ipc_recv(fd, buffer, length, flags);
 }
 
-ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
-  // TODO: Use alloca for small sizes?
-  // Based on implementation found here:
-  // http://www.oschina.net/code/explore/glibc-2.9/sysdeps/posix/writev.c
+template <typename IOVFunc>
+ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO) {
+  // TODO: Combine shared logic with do_ipc_io!
 
   ipc_info &i = getInfo(getEP(fd));
   assert(i.state != STATE_INVALID);
 
   // If localized, just use fast socket!
   if (i.state == STATE_OPTIMIZED) {
-    ssize_t ret = __real_writev(i.localfd, vec, count);
+    ssize_t ret = IO(i.localfd, vec, count);
     if (ret != -1) {
       i.bytes_trans += ret;
     }
@@ -179,8 +178,8 @@ ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
     // Overflow check...
     if (SSIZE_MAX - bytes < vec[i].iov_len) {
       // We could try to set errno here,
-      // but easier to just let actual writev do this:
-      return __real_writev(fd, vec, count);
+      // but easier to just let actual writev/readv do this:
+      return IO(fd, vec, count);
     }
 
     bytes += vec[i].iov_len;
@@ -205,7 +204,7 @@ ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
     }
     assert(rem == 0);
 
-    ssize_t ret = __real_writev(fd, newvec, newcount);
+    ssize_t ret = IO(fd, newvec, newcount);
 
     if (ret == -1)
       return ret;
@@ -217,7 +216,7 @@ ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
     return ret;
   }
 
-  ssize_t ret = __real_writev(fd, vec, count);
+  ssize_t ret = IO(fd, vec, count);
 
   // We don't handle other states yet
   assert(i.state == STATE_UNOPT);
@@ -229,4 +228,12 @@ ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
   i.bytes_trans += ret;
 
   return ret;
+}
+
+ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
+  return do_ipc_iov(fd, vec, count, __real_writev);
+}
+
+ssize_t do_ipc_readv(int fd, const struct iovec *vec, int count) {
+  return do_ipc_iov(fd, vec, count, __real_readv);
 }
