@@ -24,8 +24,8 @@ RUN dd if=/dev/urandom of=/var/www/html/10M.bin bs=10M count=1
 RUN dd if=/dev/urandom of=/var/www/html/1M.bin bs=1M count=1
 
 # Inject latest versions of the library and daemon:
-ADD tmp/libipc.so /lib/
 ADD tmp/ipcd /bin/
+ADD tmp/libipc.so /lib/
 
 # Ask dynamic linker to preload libipc.so into everything!
 RUN echo "/lib/libipc.so" >> /etc/ld.so.preload

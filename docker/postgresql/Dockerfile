@@ -28,8 +28,8 @@ CMD service postgresql start && ./modify_postgres_pass.sh && sudo -u postgres /b
 
 
 # Inject latest versions of the library and daemon:
-ADD tmp/libipc.so /lib/
 ADD tmp/ipcd /bin/
+ADD tmp/libipc.so /lib/
 
 # Ask dynamic linker to preload libipc.so into everything!
 RUN chmod 555 /bin/ipcd /lib/libipc.so

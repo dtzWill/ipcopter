@@ -16,16 +16,16 @@ BIN_DIR="$DIR/tmp"
 mkdir -p $BIN_DIR
 
 
-make -C $LIBIPC_DIR clean
+# make -C $LIBIPC_DIR clean
 make -C $LIBIPC_DIR -j3
 cp $LIBIPC_DIR/libipc.so $BIN_DIR/
 
 cd $IPCD_DIR
-go clean
+# go clean
 go build
 go test
 
-cp $IPCD_DIR/ipcd $BIN_DIR/
+rsync -c $IPCD_DIR/ipcd $BIN_DIR/
 
 cd $DIR
 TAG=$USER/ipc-$NAME
