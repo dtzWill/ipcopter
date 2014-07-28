@@ -104,10 +104,6 @@ void shm_state_restore() {
   assert(ret != -1);
 
   ipclog("State restored!\n");
-
-  // TODO!!
-  ipclog("TODO: Process all close-on-exec fd's!\n");
-
 }
 
 void shm_state_destroy() {
