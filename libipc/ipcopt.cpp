@@ -49,11 +49,23 @@ void scan_for_cloexec() {
   }
 }
 
+void dump_registered_fds() {
+  for (unsigned i = 0; i < TABLE_SIZE; ++i) {
+    fd_info &f = getFDInfo(i);
+    if (valid_ep(f.EP)) {
+      ipc_info &info = getInfo(f.EP);
+      ipclog("Inherited known fd: %d -> (endpoint: %d, localfd: %d)\n", i, f.EP,
+             info.localfd);
+    }
+  }
+}
+
 void __ipcopt_init() {
   invalidateEPMap();
   invalidateEpollInfo();
   shm_state_restore();
   scan_for_cloexec();
+  dump_registered_fds();
 }
 
 void __attribute__((destructor)) ipcopt_fini() {
