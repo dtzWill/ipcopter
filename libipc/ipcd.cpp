@@ -86,7 +86,9 @@ void connect_to_ipcd() {
     // This code is terrible, and is likely to break
     // badly in many situations, but works for now.
     if (errno == ENOENT || errno == ECONNREFUSED) {
+      rename(PRELOAD_PATH, PRELOAD_TMP);
       fork_ipcd();
+      rename(PRELOAD_TMP, PRELOAD_PATH);
       if (__real_connect(s, (struct sockaddr *)&remote, len) == -1) {
         perror("connect-after-fork");
         exit(1);
