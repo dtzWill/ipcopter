@@ -277,3 +277,13 @@ func TestReregister(t *testing.T) {
 	// Error
 	CheckReq("UNREGISTER 0\n", "303 Invalid Endpoint ID '0'", t)
 }
+
+func TestLongLivedEndpointIDReuse(t *testing.T) {
+	P := StartServerProcess()
+	defer P.Kill()
+
+	for i := 0; i < 100; i++ {
+		CheckReq("REGISTER 1 10\n", "200 ID 0", t)
+		CheckReq("UNREGISTER 0\n", "200 OK", t)
+	}
+}

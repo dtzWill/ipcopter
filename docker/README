@@ -18,8 +18,8 @@ Quick instructions:
   $ cd ./ipc-test
   $ ./build.sh
 3) Launch a bash shell in the ipcopter-ized container you just made:
-  $ docker run -i -t $USER/ipc-hook
-  Libraries presently log events into /tmp/ipc.$PID.log, fairly verbosely O:).
+  $ docker run --rm -i -t $USER/ipc-hook
+  Libraries presently log events into /tmp/ipcd.$PID.log, fairly verbosely O:).
 
 
 Note:
