@@ -20,8 +20,8 @@
 #include <assert.h>
 #include <sys/epoll.h>
 
-const unsigned TABLE_SIZE = 1 << 14;
-const int MAX_EPOLL_ENTRIES = 100;
+const unsigned TABLE_SIZE = 1 << 11;
+const int MAX_EPOLL_ENTRIES = 20;
 
 typedef enum {
   STATE_INVALID = 0,
