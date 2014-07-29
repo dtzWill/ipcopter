@@ -37,14 +37,23 @@ static int mypid = 0;
 const char *SOCK_PATH = "/tmp/ipcd.sock";
 const char *IPCD_BIN_PATH = "/bin/ipcd";
 
-const char *PRELOAD_PATH = "/etc/ld.so.preload";
-const char *PRELOAD_TMP = "/tmp/preload.cfg";
-
 const useconds_t SLEEP_AFTER_IPCD_START_INTERVAL = 10 * 1000; // 10ms?
 
 SimpleLock &getConnectLock() {
   static SimpleLock ConnectLock;
   return ConnectLock;
+}
+
+bool we_are_ipcd;
+
+void check_if_we_are_ipcd() {
+  // man 3 program_invocation_name
+  extern char *program_invocation_short_name;
+  assert(program_invocation_short_name);
+
+  ipclog("program_invocation_short_name: %s\n", program_invocation_short_name);
+
+  we_are_ipcd = strcmp("ipcd", program_invocation_short_name) == 0;
 }
 
 void fork_ipcd() {
@@ -86,9 +95,7 @@ void connect_to_ipcd() {
     // This code is terrible, and is likely to break
     // badly in many situations, but works for now.
     if (errno == ENOENT || errno == ECONNREFUSED) {
-      rename(PRELOAD_PATH, PRELOAD_TMP);
       fork_ipcd();
-      rename(PRELOAD_TMP, PRELOAD_PATH);
       if (__real_connect(s, (struct sockaddr *)&remote, len) == -1) {
         perror("connect-after-fork");
         exit(1);
@@ -107,7 +114,9 @@ void connect_to_ipcd() {
 
 void __ipcd_init() {
   assert(ipcd_socket == 0);
-  connect_to_ipcd();
+  check_if_we_are_ipcd();
+  if (!we_are_ipcd)
+    connect_to_ipcd();
 }
 
 void __attribute__((destructor)) ipcd_dtor() {
