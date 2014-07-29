@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 // TODO: This table is presently not used thread-safe at all!
-libipc_state state = {{}, {}, {}};
+libipc_state state = {{}, {}};
 
 void invalidateEPMap() {
   // Set all endpoint identifiers to 'invalid'

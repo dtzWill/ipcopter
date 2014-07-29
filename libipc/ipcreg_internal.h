@@ -31,6 +31,8 @@ typedef struct {
   endpoint EP;
   // Is it set to close-on-exec?
   bool close_on_exec;
+  // Local?
+  bool is_local;
 } fd_info;
 
 typedef struct {
@@ -50,17 +52,12 @@ const unsigned TABLE_SIZE = 1 << 14;
 typedef struct {
   fd_info FDMap[TABLE_SIZE];
   ipc_info EndpointInfo[TABLE_SIZE];
-  bool IsLocalFD[TABLE_SIZE];
 } libipc_state;
 
 extern libipc_state state;
 
 static inline char inbounds_fd(int fd) { return (unsigned)fd <= TABLE_SIZE; }
 static inline char valid_ep(endpoint ep) { return (unsigned)ep <= TABLE_SIZE; }
-static inline bool &is_local(int fd) {
-  assert(inbounds_fd(fd));
-  return state.IsLocalFD[fd];
-}
 
 static inline fd_info &getFDInfo(int fd) {
   if (!inbounds_fd(fd)) {
@@ -70,6 +67,9 @@ static inline fd_info &getFDInfo(int fd) {
   assert(inbounds_fd(fd));
 
   return state.FDMap[fd];
+}
+static inline bool &is_local(int fd) {
+  return getFDInfo(fd).is_local;
 }
 
 static inline endpoint &getEP(int fd) { return getFDInfo(fd).EP; }
