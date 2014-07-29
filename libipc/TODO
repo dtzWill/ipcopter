@@ -12,6 +12,7 @@ Hooks:
 [X] exec handling
 [X] fork() handling
 [X] readv/writev
+[X] sendmsg/recvmsg
 
 
 Wishlist:
@@ -20,3 +21,5 @@ Wishlist:
   \-> For example, SIGALRM during internal call should reach user...
 [ ] Proper behavior for non-blocking sockets
   \-> Ensure our various internal operations don't block app unexpectedly
+[ ] Thorough tests for supported features!!!!
+[ ] Jenkins?? :D
