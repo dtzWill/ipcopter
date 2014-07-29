@@ -329,3 +329,8 @@ endpoint ipcd_endpoint_kludge(endpoint local) {
 bool ipcd_is_protected(int fd) {
   return fd == ipcd_socket;
 }
+
+bool ipcd_enabled() {
+  static bool disabled = getenv("IPCD_DISABLE") || we_are_ipcd;
+  return !disabled;
+}

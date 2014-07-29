@@ -83,6 +83,8 @@ void invalidate(endpoint ep) {
 }
 
 void register_inet_socket(int fd) {
+  if (!ipcd_enabled())
+    return;
   // Freshly created socket
   ipclog("Registering socket fd=%d\n", fd);
   endpoint &ep = getEP(fd);
@@ -101,6 +103,8 @@ void register_inet_socket(int fd) {
 }
 
 void unregister_inet_socket(int fd) {
+  if (!ipcd_enabled())
+    return;
   if (!inbounds_fd(fd)) {
     return;
   }
@@ -251,6 +255,8 @@ void dup_inet_socket(int fd1, int fd2) {
 }
 
 void set_nonblocking(int fd, bool non_blocking) {
+  if (!ipcd_enabled())
+    return;
   endpoint ep = getEP(fd);
   assert(valid_ep(ep));
 
@@ -258,5 +264,7 @@ void set_nonblocking(int fd, bool non_blocking) {
 }
 
 void set_cloexec(int fd, bool cloexec) {
+  if (!ipcd_enabled())
+    return;
   getFDInfo(fd).close_on_exec = cloexec;
 }

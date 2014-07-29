@@ -23,6 +23,9 @@ const endpoint EP_INVALID = ~endpoint(0);
 // Initialize connection
 void __ipcd_init();
 
+// Check if usage of ipcd is enabled or not
+bool ipcd_enabled();
+
 // REGISTER
 endpoint ipcd_register_socket(int fd);
 
