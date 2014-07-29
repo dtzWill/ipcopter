@@ -69,7 +69,6 @@ void fork_ipcd() {
   default:
     // Wait for ipcd to start :P
     ipclog("Starting ipcd...\n");
-    usleep(SLEEP_AFTER_IPCD_START_INTERVAL);
   }
 }
 
@@ -96,8 +95,17 @@ void connect_to_ipcd() {
     // badly in many situations, but works for now.
     if (errno == ENOENT || errno == ECONNREFUSED) {
       fork_ipcd();
-      if (__real_connect(s, (struct sockaddr *)&remote, len) == -1) {
-        perror("connect-after-fork");
+
+      int attempts = 0;
+      const int MAX_ATTEMPTS = 10;
+      while (attempts < MAX_ATTEMPTS) {
+        usleep(SLEEP_AFTER_IPCD_START_INTERVAL);
+        if (__real_connect(s, (struct sockaddr *)&remote, len) != -1)
+          break;
+        ++attempts;
+      }
+      if (attempts == MAX_ATTEMPTS) {
+        perror("Unable to connect to ipcd after attempting to start it");
         exit(1);
       }
     } else {
