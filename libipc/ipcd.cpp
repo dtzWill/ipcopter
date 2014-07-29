@@ -40,9 +40,28 @@ const char *IPCD_BIN_PATH = "/bin/ipcd";
 const char *PRELOAD_PATH = "/etc/ld.so.preload";
 const char *PRELOAD_TMP = "/tmp/preload.cfg";
 
+const useconds_t SLEEP_AFTER_IPCD_START_INTERVAL = 10 * 1000; // 10ms?
+
 SimpleLock &getConnectLock() {
   static SimpleLock ConnectLock;
   return ConnectLock;
+}
+
+void fork_ipcd() {
+  switch (__real_fork()) {
+  case -1:
+    break;
+  case 0:
+    // Child
+    execl(IPCD_BIN_PATH, IPCD_BIN_PATH, (char *)NULL);
+    perror("Failed to exec ipcd");
+    assert(0 && "Exec failed?");
+    break;
+  default:
+    // Wait for ipcd to start :P
+    ipclog("Starting ipcd...\n");
+    usleep(SLEEP_AFTER_IPCD_START_INTERVAL);
+  }
 }
 
 void connect_to_ipcd() {
@@ -67,22 +86,7 @@ void connect_to_ipcd() {
     // This code is terrible, and is likely to break
     // badly in many situations, but works for now.
     if (errno == ENOENT || errno == ECONNREFUSED) {
-      rename(PRELOAD_PATH, PRELOAD_TMP);
-      switch (__real_fork()) {
-      case -1:
-        break;
-      case 0:
-        // Child
-        execl(IPCD_BIN_PATH, IPCD_BIN_PATH, (char *)NULL);
-        perror("Failed to exec ipcd");
-        assert(0 && "Exec failed?");
-        break;
-      default:
-        // Wait for ipcd to start :P
-        ipclog("Starting ipcd...\n");
-        sleep(1);
-      }
-      rename(PRELOAD_TMP, PRELOAD_PATH);
+      fork_ipcd();
       if (__real_connect(s, (struct sockaddr *)&remote, len) == -1) {
         perror("connect-after-fork");
         exit(1);
