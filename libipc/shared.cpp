@@ -44,8 +44,16 @@ ssize_t recvfrom(int fd, void *buffer, size_t length, int flags,
   return __internal_recvfrom(fd, buffer, length, flags, address, address_len);
 }
 
+ssize_t recvmsg(int socket, struct msghdr *message, int flags) {
+  return __internal_recvmsg(socket, message, flags);
+}
+
 ssize_t send(int fd, const void *buf, size_t count, int flags) {
   return __internal_send(fd, buf, count, flags);
+}
+
+ssize_t sendmsg(int socket, const struct msghdr *message, int flags) {
+  return __internal_sendmsg(socket, message, flags);
 }
 
 ssize_t sendto(int fd, const void *message, size_t length, int flags,
@@ -178,8 +186,16 @@ ssize_t __real_recvfrom(int fd, void *buffer, size_t length, int flags,
   CALL_REAL(recvfrom, fd, buffer, length, flags, address, address_len);
 }
 
+ssize_t __real_recvmsg(int socket, struct msghdr *message, int flags) {
+  CALL_REAL(recvmsg, socket, message, flags);
+}
+
 ssize_t __real_send(int fd, const void *buf, size_t count, int flags) {
   CALL_REAL(send, fd, buf, count, flags);
+}
+
+ssize_t __real_sendmsg(int socket, const struct msghdr *message, int flags) {
+  CALL_REAL(sendmsg, socket, message, flags);
 }
 
 ssize_t __real_sendto(int fd, const void *message, size_t length, int flags,

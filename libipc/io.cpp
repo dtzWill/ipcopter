@@ -243,3 +243,53 @@ ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
 ssize_t do_ipc_readv(int fd, const struct iovec *vec, int count) {
   return do_ipc_iov(fd, vec, count, __real_readv);
 }
+
+ssize_t do_ipc_sendmsg(int socket, const struct msghdr *message, int flags) {
+  ipc_info &i = getInfo(getEP(socket));
+  assert(i.state != STATE_INVALID);
+
+  // If optimized, simply perform operation on local socket
+  if (i.state == STATE_OPTIMIZED) {
+    ssize_t ret = __real_sendmsg(i.localfd, message, flags);
+    if (ret != -1) {
+      i.bytes_trans += ret;
+    }
+    return ret;
+  }
+
+  ssize_t ret = __real_sendmsg(socket, message, flags);
+  if (ret != -1) {
+    ssize_t rem = (TRANS_THRESHOLD - i.bytes_trans);
+    if (rem > 0 && rem <= ret) {
+      ipclog("Missed threshold due to sendmsg()!\n");
+    }
+    i.bytes_trans += ret;
+  }
+
+  return ret;
+}
+
+ssize_t do_ipc_recvmsg(int socket, struct msghdr *message, int flags) {
+  ipc_info &i = getInfo(getEP(socket));
+  assert(i.state != STATE_INVALID);
+
+  // If optimized, simply perform operation on local socket
+  if (i.state == STATE_OPTIMIZED) {
+    ssize_t ret = __real_recvmsg(i.localfd, message, flags);
+    if (ret != -1) {
+      i.bytes_trans += ret;
+    }
+    return ret;
+  }
+
+  ssize_t ret = __real_recvmsg(socket, message, flags);
+  if (ret != -1) {
+    ssize_t rem = (TRANS_THRESHOLD - i.bytes_trans);
+    if (rem > 0 && rem <= ret) {
+      ipclog("Missed threshold due to recvmsg()!\n");
+    }
+    i.bytes_trans += ret;
+  }
+
+  return ret;
+}

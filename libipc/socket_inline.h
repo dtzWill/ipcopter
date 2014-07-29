@@ -31,6 +31,8 @@
 #include <string.h>
 #include <sys/uio.h>
 
+int __attribute((used)) __only_include_once = 0;
+
 static inline int __internal_socket(int domain, int type, int protocol) {
   int fd = __real_socket(domain, type, protocol);
 
@@ -306,6 +308,25 @@ static inline int __internal_setsockopt(int socket, int level, int option_name,
   return ret;
 }
 
-int __attribute((used)) __only_include_once = 0;
+static inline ssize_t __internal_recvmsg(int socket, struct msghdr *message,
+                                         int flags) {
+  ssize_t ret;
+  if (!is_registered_socket(socket))
+    ret = __real_recvmsg(socket, message, flags);
+  else
+    ret = do_ipc_recvmsg(socket, message, flags);
+  return ret;
+}
+
+static inline ssize_t __internal_sendmsg(int socket,
+                                         const struct msghdr *message,
+                                         int flags) {
+  ssize_t ret;
+  if (!is_registered_socket(socket))
+    ret = __real_sendmsg(socket, message, flags);
+  else
+    ret = do_ipc_sendmsg(socket, message, flags);
+  return ret;
+}
 
 #endif // _SOCKET_INLINE_H_

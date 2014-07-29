@@ -53,6 +53,8 @@ ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
                         struct sockaddr *address, socklen_t *address_len);
 ssize_t do_ipc_writev(int fd, const struct iovec *iov, int iovcnt);
 ssize_t do_ipc_readv(int fd, const struct iovec *iov, int iovcnt);
+ssize_t do_ipc_sendmsg(int socket, const struct msghdr *message, int flags);
+ssize_t do_ipc_recvmsg(int socket, struct msghdr *message, int flags);
 
 int do_ipc_poll(struct pollfd fds[], nfds_t nfds, int timeout);
 int do_ipc_pselect(int nfds, fd_set *readfds, fd_set *writefds,
