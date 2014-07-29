@@ -72,7 +72,40 @@ int __internal_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
       ipclog("epoll_ctl(epfd=%d, op=%d) on optimized fd %d (localfd %d)!\n",
              epfd, op, fd, localfd);
     }
-    return __real_epoll_ctl(epfd, op, localfd, event);
+    switch (op) {
+    case EPOLL_CTL_DEL: {
+      // Remove both the fd and the localfd
+      int ret1 = __real_epoll_ctl(epfd, op, fd, event);
+      int ret2 = __real_epoll_ctl(epfd, op, localfd, event);
+      // If successfully removed original, use its return value.
+      if (ret1 != -1) {
+        return ret1;
+      }
+      // Otherwise use return value of optimized fd.
+      return ret2;
+    }
+    case EPOLL_CTL_MOD: {
+      // Ensure non-optimized fd isn't in the epoll set:
+      int ret = __real_epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
+      if (ret == 0) {
+        // Unoptimized fd is present, user is attempting to modify entry
+        // for it.  We already removed the entry for unopt, so add
+        // a new entry with localfd and new event to associate with it.
+        return __real_epoll_ctl(epfd, EPOLL_CTL_ADD, localfd, event);
+      } else {
+        // Either user is attempting to modify without adding
+        // or we already replaced the unoptimized fd with localfd.
+        // Either way, do original operation with localfd instead:
+        return __real_epoll_ctl(epfd, op, localfd, event);
+      }
+    }
+    case EPOLL_CTL_ADD:
+      // Add localfd instead
+      return __real_epoll_ctl(epfd, op, localfd, event);
+    }
+    assert(0 && "Invalid epoll operation!\n");
   }
+
+  // Not optimized, forward requested operation.
   return __real_epoll_ctl(epfd, op, fd, event);
 }
