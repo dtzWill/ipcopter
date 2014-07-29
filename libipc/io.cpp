@@ -56,9 +56,12 @@ void attempt_optimization(int fd) {
     // TODO: Async!
     endpoint remote = EP_INVALID;
     size_t attempts = 0;
-    for (size_t attempts = 0; attempts <= MAX_SYNC_ATTEMPTS; ++attempts) {
+    while (true) {
       remote = ipcd_endpoint_kludge(ep);
       if (remote != EP_INVALID)
+        break;
+      ++attempts;
+      if (attempts >= MAX_SYNC_ATTEMPTS + 3)
         break;
       if (attempts > 3) {
         sched_yield();
