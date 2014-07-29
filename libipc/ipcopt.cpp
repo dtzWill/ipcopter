@@ -193,6 +193,9 @@ char is_protected_fd(int fd) {
       if (logfd == fd)
         return true;
 
+  if (!ipcd_enabled())
+    return false;
+
   // Check for ipcd protected sockets:
   if (ipcd_is_protected(fd))
     return true;

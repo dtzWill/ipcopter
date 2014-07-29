@@ -115,7 +115,7 @@ void connect_to_ipcd() {
 void __ipcd_init() {
   assert(ipcd_socket == 0);
   check_if_we_are_ipcd();
-  if (!we_are_ipcd)
+  if (ipcd_enabled())
     connect_to_ipcd();
 }
 
