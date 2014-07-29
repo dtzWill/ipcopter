@@ -148,8 +148,17 @@ int socket(int domain, int type, int protocol) {
 
 // System
 pid_t fork(void) { return __internal_fork(); }
+int execv(const char *path, char *const argv[]) {
+  return __internal_execv(path, argv);
+}
 int execve(const char *path, char *const argv[], char *const envp[]) {
   return __internal_execve(path, argv, envp);
+}
+int execvp(const char *file, char *const argv[]) {
+  return __internal_execvp(file, argv);
+}
+int execvpe(const char *file, char *const argv[], char *const envp[]) {
+  return __internal_execvpe(file, argv, envp);
 }
 
 // epoll

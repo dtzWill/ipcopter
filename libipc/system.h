@@ -19,8 +19,11 @@
 #include "wrapper.h"
 
 BEGIN_EXTERN_C
-int __internal_execve(const char *path, char *const argv[],
-                      char *const envp[]);
+int __internal_execv(const char *path, char *const argv[]);
+int __internal_execve(const char *path, char *const argv[], char *const envp[]);
+int __internal_execvp(const char *file, char *const argv[]);
+int __internal_execvpe(const char *file, char *const argv[],
+                       char *const envp[]);
 pid_t __internal_fork(void);
 END_EXTERN_C
 
