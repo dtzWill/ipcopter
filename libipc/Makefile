@@ -28,7 +28,7 @@ $(STATIC_LIB): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $^
 
 $(DYNAMIC_LIB): $(OBJS)
-	$(CXX) $(SHARED_LDFLAGS) $^ -o $@
+	$(CXX) $^ $(SHARED_LDFLAGS) -o $@
 
 %.o: %.c $(H_DEPS) Makefile
 	$(CC) $< $(CFLAGS) -c -o $@
