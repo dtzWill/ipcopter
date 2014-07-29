@@ -56,14 +56,25 @@ void check_if_we_are_ipcd() {
   we_are_ipcd = strcmp("ipcd", program_invocation_short_name) == 0;
 }
 
+void start_ipcd() {
+  int d = daemon(0, 0);
+  if (d == -1) {
+    perror("Failed to daemonize");
+    exit(1);
+  }
+
+  execl(IPCD_BIN_PATH, IPCD_BIN_PATH, (char *)NULL);
+  perror("Failed to exec ipcd");
+  exit(1);
+}
+
 void fork_ipcd() {
   switch (__real_fork()) {
   case -1:
     break;
   case 0:
     // Child
-    execl(IPCD_BIN_PATH, IPCD_BIN_PATH, (char *)NULL);
-    perror("Failed to exec ipcd");
+    start_ipcd();
     assert(0 && "Exec failed?");
     break;
   default:

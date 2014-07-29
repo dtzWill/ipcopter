@@ -20,8 +20,16 @@ func StartServerProcess() *os.Process {
 	if err != nil {
 		panic(err)
 	}
-	time.Sleep(time.Second / 20)
+	time.Sleep(time.Second / 15)
 	return cmd.Process
+}
+
+func Stop(P *os.Process) {
+	err := P.Kill()
+	if err != nil {
+		panic("Unable to kill ipcd??")
+	}
+	P.Wait()
 }
 
 // Perform indicated request, return server response string.
@@ -57,7 +65,7 @@ func CheckReq(req string, exp string, t *testing.T) {
 // Makes assumptions about endpoint id assignment behavior.
 func TestRegister(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 }
@@ -65,7 +73,7 @@ func TestRegister(t *testing.T) {
 // Verify server rejects obviously bogus command:
 func TestBadCommand(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("INVALID 1 10\n", "300 Unrecognized command", t)
 }
@@ -73,7 +81,7 @@ func TestBadCommand(t *testing.T) {
 // Verify multiple registrations from different clients work as expected.
 func TestMultipleRegister(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
@@ -84,7 +92,7 @@ func TestMultipleRegister(t *testing.T) {
 // connection to the server.
 func TestMultipleRegisterSameConn(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	c, err := net.Dial("unix", SOCKET_PATH)
 	defer c.Close()
@@ -117,7 +125,7 @@ func TestMultipleRegisterSameConn(t *testing.T) {
 // Verify basic LOCALIZE functionality.
 func TestLocalize(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 	CheckReq("REGISTER 1 5\n", "200 ID 1", t)
@@ -127,7 +135,7 @@ func TestLocalize(t *testing.T) {
 // Ensure server is okay with redundant LOCALIZE messages.
 func TestLocalizeRedundant(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 	CheckReq("REGISTER 1 5\n", "200 ID 1", t)
@@ -170,7 +178,7 @@ func GetLocalFDFor(ID int, t *testing.T) int {
 // * Verify what we write in one of these comes out the other one
 func TestLocalizeFDs(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 	CheckReq("REGISTER 1 5\n", "200 ID 1", t)
@@ -200,7 +208,7 @@ func TestLocalizeFDs(t *testing.T) {
 // attempts to unregister endpoint twice or doesn't exist.
 func TestUnregister(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 	CheckReq("REGISTER 1 5\n", "200 ID 1", t)
@@ -219,7 +227,7 @@ func TestUnregister(t *testing.T) {
 // unregisters all endpoints for specified pid.
 func TestRemoveAll(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 	CheckReq("REGISTER 1 5\n", "200 ID 1", t)
@@ -234,7 +242,7 @@ func TestRemoveAll(t *testing.T) {
 
 func TestEndpointKludge(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
@@ -257,7 +265,7 @@ func TestEndpointKludge(t *testing.T) {
 
 func TestReregister(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
@@ -280,7 +288,7 @@ func TestReregister(t *testing.T) {
 
 func TestLongLivedEndpointIDReuse(t *testing.T) {
 	P := StartServerProcess()
-	defer P.Kill()
+	defer Stop(P)
 
 	for i := 0; i < 100; i++ {
 		CheckReq("REGISTER 1 10\n", "200 ID 0", t)
