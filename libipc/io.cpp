@@ -54,12 +54,16 @@ void attempt_optimization(int fd) {
   if (i.bytes_trans == TRANS_THRESHOLD) {
     ipclog("Completed partial operation to sync at THRESHOLD for fd=%d!\n", fd);
     // TODO: Async!
-    endpoint remote;
+    endpoint remote = EP_INVALID;
     size_t attempts = 0;
-    while (((remote = ipcd_endpoint_kludge(ep)) == EP_INVALID) &&
-           ++attempts < MAX_SYNC_ATTEMPTS) {
-      sched_yield();
-      usleep(ATTEMPT_SLEEP_INTERVAL);
+    for (size_t attempts = 0; attempts <= MAX_SYNC_ATTEMPTS; ++attempts) {
+      remote = ipcd_endpoint_kludge(ep);
+      if (remote != EP_INVALID)
+        break;
+      if (attempts > 3) {
+        sched_yield();
+        usleep(ATTEMPT_SLEEP_INTERVAL);
+      }
     }
 
     if (valid_ep(remote)) {
