@@ -169,9 +169,9 @@ void __attribute__((destructor)) ipcd_dtor() {
     ipclog("Failure, response=%s\n", buf);
   }
   if (success)
-    ipclog("Successfully unregistered all fd's");
+    ipclog("Successfully unregistered all fd's\n");
   else
-    ipclog("Failed to remove all fd's");
+    ipclog("Failed to remove all fd's\n");
 }
 
 void connect_if_needed() {
