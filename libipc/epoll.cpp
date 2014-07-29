@@ -18,94 +18,154 @@
 #include "ipcreg_internal.h"
 #include "real.h"
 
+#include <algorithm>
+
 int __internal_epoll_create(int size) {
   // ipclog("epoll_create(size=%d)\n", size);
-  return __real_epoll_create(size);
+  int ret = __real_epoll_create(size);
+  if (ret != -1) {
+    fd_info &f = getFDInfo(ret);
+    assert(!valid_ep(f.EP));
+    assert(!f.is_local);
+    assert(!f.close_on_exec);
+
+    assert(!f.epoll.valid);
+
+    f.epoll.count = 0;
+    f.epoll.valid = true;
+  }
+  return ret;
 }
 int __internal_epoll_create1(int flags) {
-  // ipclog("epoll_create1(flags=%d)\n", flags);
+  int ret = __real_epoll_create1(flags);
+  if (ret != -1) {
+    fd_info &f = getFDInfo(ret);
+    assert(!valid_ep(f.EP));
+    assert(!f.is_local);
+    assert(!f.close_on_exec);
+
+    assert(!f.epoll.valid);
+
+    f.epoll.count = 0;
+    f.close_on_exec = (flags & EPOLL_CLOEXEC) != 0;
+    f.epoll.valid = true;
+  }
+  return ret;
   return __real_epoll_create1(flags);
 }
-int __internal_epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
-                           int timeout, const sigset_t *sigmask) {
-  // ipclog("epoll_pwait(epfd=%d,...)\n", epfd);
-  int ret = __real_epoll_pwait(epfd, events, maxevents, timeout, sigmask);
 
-  // If no fd's are ready, or an error occurred, we're done.
-  if (ret == -1 || ret == 0)
-    return ret;
-
-  assert(ret > 0);
-  return ret;
-
-  // TODO: Without tracking details of what fd's we replaced, we can't guarantee
-  // that only one fd has the localfd returned by epoll.
-  // For now, ignore, as it would be straightforward
-  // and probably cheaper than this scan to track
-  // information for epfd's.
-
-
-  //for (int i = 0; i < ret; ++i) {
-  //  int ready_fd = events[i].data.fd;
-  //  // AFAIK 'fd' here is only usually the fd causing the event.
-  //  if (!inbounds_fd(ready_fd))
-  //    continue;
-
-  //  }
-
-  //}
-  //for (int lfd = 0; lfd < TABLE_SIZE; ++lfd) {
-  //  if (is_local(lfd)) {
-
-  //  }
-  //}
-
-}
-int __internal_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
-  // ipclog("epoll_ctl(epfd=%d, op=%d, fd=%d, ...)\n", epfd, op, fd);
-
-  // Intercept uses of optimized fd's, replace with local ones.
-  // TODO: How to handle epoll of an fd optimized after it's added?
-  if (is_optimized_socket_safe(fd)) {
-    int localfd = getInfo(getEP(fd)).localfd;
-    if (false) {
-      ipclog("epoll_ctl(epfd=%d, op=%d) on optimized fd %d (localfd %d)!\n",
-             epfd, op, fd, localfd);
+epoll_entry *find_epoll_entry(int epfd, int fd) {
+  epoll_info &ei = getEpollInfo(epfd);
+  assert(ei.valid);
+  for (unsigned i = 0; i < ei.count; ++i) {
+    if (ei.entries[i].fd == fd) {
+      return &ei.entries[i];
     }
-    switch (op) {
-    case EPOLL_CTL_DEL: {
-      // Remove both the fd and the localfd
-      int ret1 = __real_epoll_ctl(epfd, op, fd, event);
-      int ret2 = __real_epoll_ctl(epfd, op, localfd, event);
-      // If successfully removed original, use its return value.
-      if (ret1 != -1) {
-        return ret1;
-      }
-      // Otherwise use return value of optimized fd.
-      return ret2;
-    }
-    case EPOLL_CTL_MOD: {
-      // Ensure non-optimized fd isn't in the epoll set:
-      int ret = __real_epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
-      if (ret == 0) {
-        // Unoptimized fd is present, user is attempting to modify entry
-        // for it.  We already removed the entry for unopt, so add
-        // a new entry with localfd and new event to associate with it.
-        return __real_epoll_ctl(epfd, EPOLL_CTL_ADD, localfd, event);
-      } else {
-        // Either user is attempting to modify without adding
-        // or we already replaced the unoptimized fd with localfd.
-        // Either way, do original operation with localfd instead:
-        return __real_epoll_ctl(epfd, op, localfd, event);
-      }
-    }
-    case EPOLL_CTL_ADD:
-      // Add localfd instead
-      return __real_epoll_ctl(epfd, op, localfd, event);
-    }
-    assert(0 && "Invalid epoll operation!\n");
   }
 
-  // Not optimized, forward requested operation.
+  return NULL;
+}
+
+
+int __internal_epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
+                           int timeout, const sigset_t *sigmask) {
+
+  // Ensure this epfd doesn't have any references to fd's
+  // that have since been replaced with local ones!
+  epoll_info &ei = getEpollInfo(epfd);
+  assert(ei.valid);
+
+  for (unsigned i = 0; i < ei.count; ++i) {
+    int fd = ei.entries[i].fd;
+    if (is_optimized_socket_safe(fd)) {
+      // Replace with localfd!
+      int ret = __real_epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
+      assert(ret == 0);
+      int localfd = getInfo(getEP(fd)).localfd;
+      ret =
+          __real_epoll_ctl(epfd, EPOLL_CTL_ADD, localfd, &ei.entries[i].event);
+      // Might fail if user adds multiple fd's with same description
+      // to the same epoll set.  We don't support this currently.
+      assert(ret == 0);
+      ei.entries[i].fd = localfd;
+    }
+  }
+
+  return __real_epoll_pwait(epfd, events, maxevents, timeout, sigmask);
+}
+
+int __internal_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
+  epoll_info &ei = getEpollInfo(epfd);
+  assert(ei.valid);
+
+  int localfd = is_optimized_socket_safe(fd) ? getInfo(getEP(fd)).localfd : -1;
+  epoll_entry *unopt_entry = find_epoll_entry(epfd, fd);
+  epoll_entry *opt_entry =
+      (localfd != -1) ? find_epoll_entry(epfd, localfd) : NULL;
+  // Assert at most one exists:
+  assert((opt_entry == NULL) || (unopt_entry == NULL));
+
+  // Only one operation is valid for case where
+  // neither entry exists:
+  if (!opt_entry && !unopt_entry && op != EPOLL_CTL_ADD) {
+    // Forward requested operation, it will fail regardless
+    return __real_epoll_ctl(epfd, op, fd, event);
+  }
+
+  switch (op) {
+  case EPOLL_CTL_ADD: {
+    // Okay, we're adding it.
+
+    // If already added, let real epoll return error:
+    if (opt_entry)
+      return __real_epoll_ctl(epfd, EPOLL_CTL_ADD, localfd, event);
+    else if (unopt_entry)
+      return __real_epoll_ctl(epfd, EPOLL_CTL_ADD, localfd, event);
+    else {
+      int addfd = (localfd != -1) ? localfd : fd;
+      int ret = __real_epoll_ctl(epfd, EPOLL_CTL_ADD, addfd, event);
+      // Add to our epoll entries list for this epfd:
+      if (ret == 0) {
+        epoll_entry &new_entry = ei.entries[ei.count++];
+        new_entry.fd = addfd;
+        new_entry.event = *event;
+      }
+      return ret;
+    }
+  }
+  case EPOLL_CTL_MOD: {
+    // Modify whichever we have a valid entry for
+    epoll_entry *entry = unopt_entry;
+    int modfd = fd;
+    if (opt_entry) {
+      entry = opt_entry;
+      modfd = localfd;
+    }
+    int ret = __real_epoll_ctl(epfd, op, modfd, event);
+    if (ret == 0) {
+      entry->event = *event;
+    }
+    return ret;
+  }
+  case EPOLL_CTL_DEL: {
+    // Delete whichever we have entry for
+    epoll_entry *entry = unopt_entry;
+    int delfd = fd;
+    if (opt_entry) {
+      entry = opt_entry;
+      delfd = localfd;
+    }
+    int ret = __real_epoll_ctl(epfd, op, delfd, event);
+    if (ret == 0) {
+      // Successfully deleted entry, remove from list
+      --ei.count;
+      if (ei.count > 0)
+        std::swap(*entry, ei.entries[ei.count]);
+    }
+    return ret;
+  }
+  }
+
+  // Invalid epoll operation, forward
   return __real_epoll_ctl(epfd, op, fd, event);
 }

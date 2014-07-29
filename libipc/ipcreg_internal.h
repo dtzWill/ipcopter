@@ -18,6 +18,10 @@
 #include "debug.h"
 
 #include <assert.h>
+#include <sys/epoll.h>
+
+const unsigned TABLE_SIZE = 1 << 14;
+const int MAX_EPOLL_ENTRIES = 100;
 
 typedef enum {
   STATE_INVALID = 0,
@@ -27,12 +31,25 @@ typedef enum {
 } EndpointState;
 
 typedef struct {
+  int fd;
+  epoll_event event;
+} epoll_entry;
+
+typedef struct {
+  bool valid;
+  unsigned count;
+  epoll_entry entries[MAX_EPOLL_ENTRIES];
+} epoll_info;
+
+typedef struct {
   // Does this FD have an EP to go with it?
   endpoint EP;
   // Is it set to close-on-exec?
   bool close_on_exec;
   // Local?
   bool is_local;
+  // epoll information, if applicible...
+  epoll_info epoll;
 } fd_info;
 
 typedef struct {
@@ -46,9 +63,6 @@ typedef struct {
   bool non_blocking;
 } ipc_info;
 
-// For now, just index directly into pre-allocate table with fd.
-// We will also need a way to go from nonce to fd!
-const unsigned TABLE_SIZE = 1 << 14;
 typedef struct {
   fd_info FDMap[TABLE_SIZE];
   ipc_info EndpointInfo[TABLE_SIZE];
@@ -71,6 +85,8 @@ static inline fd_info &getFDInfo(int fd) {
 static inline bool &is_local(int fd) {
   return getFDInfo(fd).is_local;
 }
+
+static inline epoll_info &getEpollInfo(int fd) { return getFDInfo(fd).epoll; }
 
 static inline endpoint &getEP(int fd) { return getFDInfo(fd).EP; }
 

@@ -31,10 +31,16 @@ void invalidateEPMap() {
     state.FDMap[i].EP = EP_INVALID;
 }
 
+void invalidateEpollInfo() {
+  // No fd is an epoll fd yet.
+  for (unsigned i = 0; i < TABLE_SIZE; ++i)
+    getEpollInfo(i).valid = false;
+}
+
 void scan_for_cloexec() {
   for (unsigned i = 0; i < TABLE_SIZE; ++i) {
     fd_info &f = getFDInfo(i);
-    if (valid_ep(f.EP) && f.close_on_exec) {
+    if ((valid_ep(f.EP) || f.epoll.valid) && f.close_on_exec) {
       // This fd is actually already closed!
 
       // Unregister it, closing localfd as needed...
@@ -45,6 +51,7 @@ void scan_for_cloexec() {
 
 void __ipcopt_init() {
   invalidateEPMap();
+  invalidateEpollInfo();
   shm_state_restore();
   scan_for_cloexec();
 }
@@ -98,6 +105,10 @@ void unregister_inet_socket(int fd) {
     return;
   }
 
+  // Closing epoll fd makes it no longer valid epoll fd.
+  fd_info &f = getFDInfo(fd);
+  f.epoll.valid = false;
+
   endpoint ep = getEP(fd);
   // Allow attempt to unregister fd's we don't
   // have endpoints for, this happens all the time :)
@@ -111,7 +122,6 @@ void unregister_inet_socket(int fd) {
 
   assert(i.ref_count > 0);
   // FD no longer refers to this endpoint!
-  fd_info &f = getFDInfo(fd);
   f.EP = EP_INVALID;
   f.close_on_exec = false;
   if (--i.ref_count == 0) {
