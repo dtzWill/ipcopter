@@ -22,4 +22,5 @@ Wishlist:
 [ ] Proper behavior for non-blocking sockets
   \-> Ensure our various internal operations don't block app unexpectedly
 [ ] Thorough tests for supported features!!!!
+[ ] Tests for ipcd startup/daemon/system integration nasty cases
 [ ] Jenkins?? :D
