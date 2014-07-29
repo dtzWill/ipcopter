@@ -148,6 +148,24 @@ int socket(int domain, int type, int protocol) {
 
 // System
 pid_t fork(void) { return __internal_fork(); }
+
+int execl(const char *path, const char *arg, ...) {
+  BUILD_ARGV(arg);
+  return __internal_execv(path, argv);
+}
+int execlp(const char *file, const char *arg, ...) {
+  BUILD_ARGV(arg);
+  return __internal_execvp(file, argv);
+}
+// "execle" isn't valid C as described in man-page,
+// and we don't have reason to support it yet.
+// Ignoring for now.
+#if 0
+int execle(const char *path, const char *arg, ..., char *const envp[]) {
+  BUILD_ARGV(arg);
+  return __internal_execvpe(path, argv, envp);
+}
+#endif
 int execv(const char *path, char *const argv[]) {
   return __internal_execv(path, argv);
 }

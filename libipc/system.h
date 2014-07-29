@@ -14,6 +14,8 @@
 #ifndef _SYSTEM_H_
 #define _SYSTEM_H_
 
+#include <assert.h>
+#include <stdarg.h>
 #include <unistd.h>
 
 #include "wrapper.h"
@@ -25,6 +27,22 @@ int __internal_execvp(const char *file, char *const argv[]);
 int __internal_execvpe(const char *file, char *const argv[],
                        char *const envp[]);
 pid_t __internal_fork(void);
+
+// Macro for execl* arg gathering:
+#define BUILD_ARGV(arg)                                                        \
+  const char *_argv[100];                                                      \
+  int argc = 0;                                                                \
+  va_list ap;                                                                  \
+  va_start(ap, arg);                                                           \
+  _argv[0] = arg;                                                              \
+  while (_argv[argc]) {                                                        \
+    argc++;                                                                    \
+    assert(argc < 100);                                                        \
+    _argv[argc] = va_arg(ap, const char *);                                    \
+  }                                                                            \
+  va_end(ap);                                                                  \
+  char *const *argv = (char *const *)_argv;
+
 END_EXTERN_C
 
 #endif // _SYSTEM_H_
