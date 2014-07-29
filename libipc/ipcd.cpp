@@ -132,7 +132,8 @@ void __attribute__((destructor)) ipcd_dtor() {
   assert(len > 5);
   int err = __real_write(ipcd_socket, buf, len);
   if (err < 0) {
-    ipclog("Error sending ipcd REMOVALL command in dtor: %s\n", strerror());
+    ipclog("Error sending ipcd REMOVALL command in dtor: %s\n",
+           strerror(errno));
     exit(1);
   }
   err = __real_read(ipcd_socket, buf, 50);
@@ -141,7 +142,7 @@ void __attribute__((destructor)) ipcd_dtor() {
   const char *match = "200 REMOVED ";
   size_t matchlen = strlen(match);
   if (size_t(err) < matchlen) {
-    ipclog("Error receiving response from ipcd in dtor: %s\n", strerror());
+    ipclog("Error receiving response from ipcd in dtor: %s\n", strerror(errno));
     exit(1);
   }
   bool success = (strncmp(buf, "200 REMOVED ", matchlen) == 0);
