@@ -250,7 +250,10 @@ ssize_t do_ipc_sendmsg(int socket, const struct msghdr *message, int flags) {
 
   // If optimized, simply perform operation on local socket
   if (i.state == STATE_OPTIMIZED) {
-    ssize_t ret = __real_sendmsg(i.localfd, message, flags);
+    struct msghdr tmp = *message;
+    tmp.msg_name = 0;
+    tmp.msg_namelen = 0;
+    ssize_t ret = __real_sendmsg(i.localfd, &tmp, flags);
     if (ret != -1) {
       i.bytes_trans += ret;
     }
@@ -275,8 +278,12 @@ ssize_t do_ipc_recvmsg(int socket, struct msghdr *message, int flags) {
 
   // If optimized, simply perform operation on local socket
   if (i.state == STATE_OPTIMIZED) {
-    ssize_t ret = __real_recvmsg(i.localfd, message, flags);
+    struct msghdr tmp = *message;
+    tmp.msg_name = 0;
+    tmp.msg_namelen = 0;
+    ssize_t ret = __real_recvmsg(i.localfd, &tmp, flags);
     if (ret != -1) {
+      *message = tmp;
       i.bytes_trans += ret;
     }
     return ret;
