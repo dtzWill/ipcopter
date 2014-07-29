@@ -132,7 +132,7 @@ void __attribute__((destructor)) ipcd_dtor() {
   assert(len > 5);
   int err = __real_write(ipcd_socket, buf, len);
   if (err < 0) {
-    perror("write");
+    ipclog("Error sending ipcd REMOVALL command in dtor: %s\n", strerror());
     exit(1);
   }
   err = __real_read(ipcd_socket, buf, 50);
@@ -141,14 +141,17 @@ void __attribute__((destructor)) ipcd_dtor() {
   const char *match = "200 REMOVED ";
   size_t matchlen = strlen(match);
   if (size_t(err) < matchlen) {
-    perror("read");
+    ipclog("Error receiving response from ipcd in dtor: %s\n", strerror());
     exit(1);
   }
   bool success = (strncmp(buf, "200 REMOVED ", matchlen) == 0);
   if (!success) {
     ipclog("Failure, response=%s\n", buf);
   }
-  assert(success && "Unable to unregister all fd's");
+  if (success)
+    ipclog("Successfully unregistered all fd's");
+  else
+    ipclog("Failed to remove all fd's");
 }
 
 void connect_if_needed() {
