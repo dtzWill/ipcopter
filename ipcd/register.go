@@ -51,13 +51,17 @@ func (C *IPCContext) register(PID, FD int) (int, error) {
 	defer C.Lock.Unlock()
 
 	ID := C.FreeID
-	// Simple allocation scheme.
-	// TODO: Handle overflow and ID re-use
-	C.FreeID++
 
 	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 1 /* refcnt */, ID}
 
 	C.EPMap[ID] = &EPI
+
+	// Find next free ID
+	used := true
+	for used {
+		C.FreeID++
+		_, used = C.EPMap[C.FreeID]
+	}
 
 	return ID, nil
 }
@@ -141,6 +145,10 @@ func (C *IPCContext) unregister(ID int) error {
 
 	// Remove enties from map
 	delete(C.EPMap, ID)
+
+	if ID < C.FreeID {
+		C.FreeID = ID
+	}
 
 	// TODO: "Un-localize" endpoint?
 	if EPI.Info != nil {
