@@ -54,7 +54,8 @@ typedef struct {
 
 typedef struct {
   // Bytes transmitted through this endpoint
-  size_t bytes_trans;
+  size_t bytes_sent;
+  size_t bytes_recv;
   // Does this endpoint have a local fd?
   int localfd;
   uint16_t ref_count;

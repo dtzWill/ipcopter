@@ -45,13 +45,14 @@ void copy_bufsizes(int src, int dst) {
   copy_bufsize(src, dst, SO_SNDBUF);
 }
 
-void attempt_optimization(int fd) {
+void attempt_optimization(int fd, bool send) {
   endpoint ep = getEP(fd);
   assert(valid_ep(ep));
   ipc_info &i = getInfo(ep);
   assert(i.state != STATE_INVALID);
 
-  if (i.bytes_trans == TRANS_THRESHOLD) {
+  size_t &bytes = send ? i.bytes_sent : i.bytes_recv;
+  if (bytes == TRANS_THRESHOLD) {
     ipclog("Completed partial operation to sync at THRESHOLD for fd=%d!\n", fd);
     // TODO: Async!
     endpoint remote = EP_INVALID;
@@ -88,22 +89,24 @@ void attempt_optimization(int fd) {
 typedef ssize_t (*IOFunc)(...);
 
 template <typename buf_t>
-ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
+ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
+                  bool send) {
   endpoint ep = getEP(fd);
   ipc_info &i = getInfo(ep);
   assert(i.state != STATE_INVALID);
 
   // If localized, just use fast socket:
+  size_t &bytes = send ? i.bytes_sent : i.bytes_recv;
   if (i.state == STATE_OPTIMIZED) {
     ssize_t ret = IO(i.localfd, buf, count, flags);
     if (ret != -1 && !(flags & MSG_PEEK)) {
-      i.bytes_trans += ret;
+      bytes += ret;
     }
     return ret;
   }
 
   // Otherwise, use original fd:
-  ssize_t rem = (TRANS_THRESHOLD - i.bytes_trans);
+  ssize_t rem = (TRANS_THRESHOLD - bytes);
   if (rem > 0 && size_t(rem) <= count) {
     ssize_t ret = IO(fd, buf, rem, flags);
 
@@ -111,9 +114,10 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
       return ret;
     }
 
-    i.bytes_trans += ret;
+    bytes += ret;
+    assert(bytes <= TRANS_THRESHOLD);
 
-    attempt_optimization(fd);
+    attempt_optimization(fd, send);
 
     return ret;
   }
@@ -126,17 +130,17 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO) {
     return ret;
 
   // Successful operation, add to running total.
-  i.bytes_trans += ret;
+  bytes += ret;
 
   return ret;
 }
 
 ssize_t do_ipc_send(int fd, const void *buf, size_t count, int flags) {
-  return do_ipc_io(fd, buf, count, flags, (IOFunc)__real_send);
+  return do_ipc_io(fd, buf, count, flags, (IOFunc)__real_send, true);
 }
 
 ssize_t do_ipc_recv(int fd, void *buf, size_t count, int flags) {
-  return do_ipc_io(fd, buf, count, flags, (IOFunc)__real_recv);
+  return do_ipc_io(fd, buf, count, flags, (IOFunc)__real_recv, false);
 }
 
 ssize_t do_ipc_sendto(int fd, const void *message, size_t length, int flags,
@@ -164,17 +168,19 @@ ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
 }
 
 template <typename IOVFunc>
-ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO) {
+ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
+                   bool send) {
   // TODO: Combine shared logic with do_ipc_io!
 
   ipc_info &i = getInfo(getEP(fd));
   assert(i.state != STATE_INVALID);
 
   // If localized, just use fast socket!
+  size_t &bytes_stat = send ? i.bytes_sent : i.bytes_recv;
   if (i.state == STATE_OPTIMIZED) {
     ssize_t ret = IO(i.localfd, vec, count);
     if (ret != -1) {
-      i.bytes_trans += ret;
+      bytes_stat += ret;
     }
     return ret;
   }
@@ -191,7 +197,7 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO) {
     bytes += vec[i].iov_len;
   }
 
-  ssize_t rem = (TRANS_THRESHOLD - i.bytes_trans);
+  ssize_t rem = (TRANS_THRESHOLD - bytes_stat);
   if (rem > 0 && size_t(rem) <= bytes) {
 
     // Need to construct alternate iovec!
@@ -215,9 +221,10 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO) {
     if (ret == -1)
       return ret;
 
-    i.bytes_trans += ret;
+    bytes_stat += ret;
+    assert(bytes_stat <= TRANS_THRESHOLD);
 
-    attempt_optimization(fd);
+    attempt_optimization(fd, send);
 
     return ret;
   }
@@ -231,17 +238,17 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO) {
     return ret;
 
   // Successful operation, add to running total.
-  i.bytes_trans += ret;
+  bytes_stat += ret;
 
   return ret;
 }
 
 ssize_t do_ipc_writev(int fd, const struct iovec *vec, int count) {
-  return do_ipc_iov(fd, vec, count, __real_writev);
+  return do_ipc_iov(fd, vec, count, __real_writev, true);
 }
 
 ssize_t do_ipc_readv(int fd, const struct iovec *vec, int count) {
-  return do_ipc_iov(fd, vec, count, __real_readv);
+  return do_ipc_iov(fd, vec, count, __real_readv, false);
 }
 
 ssize_t do_ipc_sendmsg(int socket, const struct msghdr *message, int flags) {
@@ -249,24 +256,26 @@ ssize_t do_ipc_sendmsg(int socket, const struct msghdr *message, int flags) {
   assert(i.state != STATE_INVALID);
 
   // If optimized, simply perform operation on local socket
+  size_t &bytes = i.bytes_sent;
   if (i.state == STATE_OPTIMIZED) {
     struct msghdr tmp = *message;
     tmp.msg_name = 0;
     tmp.msg_namelen = 0;
     ssize_t ret = __real_sendmsg(i.localfd, &tmp, flags);
     if (ret != -1) {
-      i.bytes_trans += ret;
+      bytes += ret;
     }
     return ret;
   }
 
   ssize_t ret = __real_sendmsg(socket, message, flags);
   if (ret != -1) {
-    ssize_t rem = (TRANS_THRESHOLD - i.bytes_trans);
+    ssize_t rem = (TRANS_THRESHOLD - bytes);
     if (rem > 0 && rem <= ret) {
       ipclog("Missed threshold due to sendmsg()!\n");
+      assert(0);
     }
-    i.bytes_trans += ret;
+    bytes += ret;
   }
 
   return ret;
@@ -277,6 +286,7 @@ ssize_t do_ipc_recvmsg(int socket, struct msghdr *message, int flags) {
   assert(i.state != STATE_INVALID);
 
   // If optimized, simply perform operation on local socket
+  size_t &bytes = i.bytes_recv;
   if (i.state == STATE_OPTIMIZED) {
     struct msghdr tmp = *message;
     tmp.msg_name = 0;
@@ -284,18 +294,19 @@ ssize_t do_ipc_recvmsg(int socket, struct msghdr *message, int flags) {
     ssize_t ret = __real_recvmsg(i.localfd, &tmp, flags);
     if (ret != -1) {
       *message = tmp;
-      i.bytes_trans += ret;
+      bytes += ret;
     }
     return ret;
   }
 
   ssize_t ret = __real_recvmsg(socket, message, flags);
   if (ret != -1) {
-    ssize_t rem = (TRANS_THRESHOLD - i.bytes_trans);
+    ssize_t rem = (TRANS_THRESHOLD - bytes);
     if (rem > 0 && rem <= ret) {
       ipclog("Missed threshold due to recvmsg()!\n");
+      assert(0);
     }
-    i.bytes_trans += ret;
+    bytes += ret;
   }
 
   return ret;

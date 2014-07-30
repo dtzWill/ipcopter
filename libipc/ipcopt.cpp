@@ -74,11 +74,11 @@ void __attribute__((destructor)) ipcopt_fini() {
       endpoint ep = getEP(i);
       ipc_info &info = getInfo(ep);
       if (is_optimized_socket_safe(i)) {
-        ipclog("Optimized endpoint: ep=%d, fd=%d, localfd=%d, bytes_trans=%zu\n",
-               ep, i, info.localfd, info.bytes_trans);
+        ipclog("Optimized endpoint: ep=%d, fd=%d, localfd=%d, S: %zu R: %zu\n",
+               ep, i, info.localfd, info.bytes_sent, info.bytes_recv);
       } else
-        ipclog("Normal endpoint: ep=%d, fd=%d, bytes_trans=%zu\n",
-               ep, i, info.bytes_trans);
+        ipclog("Normal endpoint: ep=%d, fd=%d, S: %zu R: %zu\n",
+               ep, i, info.bytes_sent, info.bytes_recv);
 
     }
 
@@ -88,7 +88,7 @@ void invalidate(endpoint ep) {
   ipc_info &i = getInfo(ep);
   assert(i.state != STATE_INVALID);
   assert(i.ref_count == 0);
-  i.bytes_trans = 0;
+  i.bytes_sent = i.bytes_recv = 0;
   i.localfd = 0;
   i.state = STATE_INVALID;
   i.non_blocking = false;
@@ -107,7 +107,7 @@ void register_inet_socket(int fd) {
   ipc_info &i = getInfo(ep);
   assert(i.ref_count == 0);
   assert(i.state == STATE_INVALID);
-  i.bytes_trans = 0;
+  i.bytes_sent = i.bytes_recv = 0;
   i.localfd = 0;
   i.ref_count++;
   i.state = STATE_UNOPT;
@@ -133,8 +133,8 @@ void unregister_inet_socket(int fd) {
   }
   ipc_info &i = getInfo(ep);
   assert(i.state != STATE_INVALID);
-  ipclog("Unregistering socket fd=%d, bytes transferred: %zu\n", fd,
-         i.bytes_trans);
+  ipclog("Unregistering socket fd=%d, S: %zu R: %zu\n", fd,
+         i.bytes_sent, i.bytes_recv);
 
   assert(i.ref_count > 0);
   // FD no longer refers to this endpoint!
@@ -153,9 +153,8 @@ void unregister_inet_socket(int fd) {
       assert(i.state == STATE_OPTIMIZED);
       __real_close(i.localfd);
 
-      ipclog("Closing optimized endpoint: ep=%d, fd=%d, localfd=%d, "
-             "bytes_trans=%zu\n",
-             ep, fd, i.localfd, i.bytes_trans);
+      ipclog("Closing opt. endpt : ep=%d, fd=%d, localfd=%d, S: %zu R: %zu\n",
+             ep, fd, i.localfd, i.bytes_sent, i.bytes_recv);
 
       bool &isLocal = is_local(i.localfd);
       // Consistency check
