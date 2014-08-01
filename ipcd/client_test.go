@@ -311,7 +311,11 @@ func TestCRCKludge(t *testing.T) {
 	CheckReq("THRESH_CRC_KLUDGE 0 1234 4455\n", "200 NOPAIR", t)
 	CheckReq("THRESH_CRC_KLUDGE 1 4455 1234\n", "200 PAIR 0", t)
 	CheckReq("THRESH_CRC_KLUDGE 0 1234 4455\n", "200 PAIR 1", t)
-	// TODO: Test various error cases
 
 	CheckReq("LOCALIZE 0 1\n", "200 OK", t)
+
+	// TODO: Test various error cases
+
+	// TODO: How to handle this?
+	CheckReq("THRESH_CRC_KLUDGE 2 1234 4455\n", "200 NOPAIR", t)
 }

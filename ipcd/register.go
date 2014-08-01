@@ -287,6 +287,9 @@ func (C *IPCContext) crc_match(ID, S_CRC, R_CRC int) (int, error) {
 		if k == ID {
 			continue
 		}
+		if v.KludgePair != nil {
+			continue
+		}
 		if v.S_CRC == R_CRC && v.R_CRC == S_CRC {
 			MatchID = k
 			break
