@@ -25,25 +25,25 @@
 const unsigned TABLE_SIZE = 1 << 11;
 const int MAX_EPOLL_ENTRIES = 20;
 
-typedef enum {
+enum EndpointState {
   STATE_INVALID = 0,
   STATE_UNOPT,
   STATE_ID_EXCHANGE,
   STATE_OPTIMIZED,
-} EndpointState;
+};
 
-typedef struct {
+struct epoll_entry {
   int fd;
   epoll_event event;
-} epoll_entry;
+};
 
-typedef struct {
+struct epoll_info {
   bool valid;
   unsigned count;
   epoll_entry entries[MAX_EPOLL_ENTRIES];
-} epoll_info;
+};
 
-typedef struct {
+struct fd_info {
   // Does this FD have an EP to go with it?
   endpoint EP;
   // Is it set to close-on-exec?
@@ -52,9 +52,11 @@ typedef struct {
   bool is_local;
   // epoll information, if applicible...
   epoll_info epoll;
-} fd_info;
 
-typedef struct ipc_info {
+  fd_info() : EP(EP_INVALID), close_on_exec(false), is_local(false), epoll() {}
+};
+
+struct ipc_info {
   // Bytes transmitted through this endpoint
   size_t bytes_sent;
   size_t bytes_recv;
@@ -67,13 +69,24 @@ typedef struct ipc_info {
   // Non-blocking is descriptor-specific
   bool non_blocking;
 
-  ipc_info() {}
-} ipc_info;
+  ipc_info() { reset(); }
+  void reset() {
+    bytes_sent = 0;
+    bytes_recv = 0;
+    crc_sent.reset();
+    crc_recv.reset();
+    localfd = 0;
+    ref_count = 0;
+    state = STATE_INVALID;
+    non_blocking = false;
+  }
+};
 
-typedef struct {
+struct libipc_state {
   fd_info FDMap[TABLE_SIZE];
   ipc_info EndpointInfo[TABLE_SIZE];
-} libipc_state;
+  libipc_state();
+};
 
 extern libipc_state state;
 

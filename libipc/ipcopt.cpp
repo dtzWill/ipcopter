@@ -23,18 +23,12 @@
 #include <unistd.h>
 
 // TODO: This table is presently not used thread-safe at all!
-libipc_state state = {{}, {}};
-
-void invalidateEPMap() {
-  // Set all endpoint identifiers to 'invalid'
-  for (unsigned i = 0; i < TABLE_SIZE; ++i)
-    state.FDMap[i].EP = EP_INVALID;
-}
-
-void invalidateEpollInfo() {
-  // No fd is an epoll fd yet.
-  for (unsigned i = 0; i < TABLE_SIZE; ++i)
-    getEpollInfo(i).valid = false;
+libipc_state state;
+libipc_state::libipc_state() {
+  for (unsigned i = 0; i < TABLE_SIZE; ++i) {
+    FDMap[i] = fd_info();
+    EndpointInfo[i] = ipc_info();
+  }
 }
 
 void scan_for_cloexec() {
@@ -61,8 +55,7 @@ void dump_registered_fds() {
 }
 
 void __ipcopt_init() {
-  invalidateEPMap();
-  invalidateEpollInfo();
+  state = libipc_state();
   shm_state_restore();
   scan_for_cloexec();
   dump_registered_fds();
@@ -88,12 +81,7 @@ void invalidate(endpoint ep) {
   ipc_info &i = getInfo(ep);
   assert(i.state != STATE_INVALID);
   assert(i.ref_count == 0);
-  i.bytes_sent = i.bytes_recv = 0;
-  i.localfd = 0;
-  i.state = STATE_INVALID;
-  i.non_blocking = false;
-  i.crc_sent.reset();
-  i.crc_recv.reset();
+  i.reset();
 }
 
 void register_inet_socket(int fd) {
@@ -109,13 +97,10 @@ void register_inet_socket(int fd) {
   ipc_info &i = getInfo(ep);
   assert(i.ref_count == 0);
   assert(i.state == STATE_INVALID);
-  i.bytes_sent = i.bytes_recv = 0;
-  i.crc_sent.reset();
-  i.crc_recv.reset();
-  i.localfd = 0;
+  i.reset();
+
   i.ref_count++;
   i.state = STATE_UNOPT;
-  i.non_blocking = false;
 }
 
 void unregister_inet_socket(int fd) {
