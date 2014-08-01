@@ -295,3 +295,23 @@ func TestLongLivedEndpointIDReuse(t *testing.T) {
 		CheckReq("UNREGISTER 0\n", "200 OK", t)
 	}
 }
+
+func TestCRCKludge(t *testing.T) {
+	P := StartServerProcess()
+	defer Stop(P)
+
+	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
+	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
+	CheckReq("REGISTER 1 20\n", "200 ID 2", t)
+	CheckReq("REGISTER 2 10\n", "200 ID 3", t)
+	CheckReq("REGISTER 2 15\n", "200 ID 4", t)
+
+	CheckReq("THRESH_CRC_KLUDGE 0 1234 4455\n", "200 NOPAIR", t)
+	CheckReq("THRESH_CRC_KLUDGE 0 1234 4455\n", "200 NOPAIR", t)
+	CheckReq("THRESH_CRC_KLUDGE 0 1234 4455\n", "200 NOPAIR", t)
+	CheckReq("THRESH_CRC_KLUDGE 1 4455 1234\n", "200 PAIR 0", t)
+	CheckReq("THRESH_CRC_KLUDGE 0 1234 4455\n", "200 PAIR 1", t)
+	// TODO: Test various error cases
+
+	CheckReq("LOCALIZE 0 1\n", "200 OK", t)
+}

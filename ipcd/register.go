@@ -27,6 +27,8 @@ type EndPointInfo struct {
 	EP         EndPoint
 	Info       *LocalInfo
 	KludgePair *EndPointInfo
+	S_CRC      int
+	R_CRC      int
 	RefCount   int
 	ID         int
 }
@@ -52,7 +54,7 @@ func (C *IPCContext) register(PID, FD int) (int, error) {
 
 	ID := C.FreeID
 
-	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 1 /* refcnt */, ID}
+	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 0 /* S_CRC */, 0 /* R_CRC */, 1 /* refcnt */, ID}
 
 	C.EPMap[ID] = &EPI
 
@@ -254,4 +256,50 @@ func (C *IPCContext) reregister(ID, PID, FD int) error {
 	EPI.RefCount++
 
 	return nil
+}
+
+func (C *IPCContext) crc_match(ID, S_CRC, R_CRC int) (int, error) {
+	C.Lock.Lock()
+	defer C.Lock.Unlock()
+
+	EPI, exist := C.EPMap[ID]
+	if !exist {
+		return ID, errors.New(fmt.Sprintf("Invalid Endpoint ID '%d'", ID))
+	}
+
+	// If already kludge-paired this, return its kludge-pal
+	if EPI.KludgePair != nil {
+		return EPI.KludgePair.ID, nil
+	}
+
+	// TODO: Zero is a valid CRC value!
+	if EPI.S_CRC != 0 || EPI.R_CRC != 0 {
+		if EPI.S_CRC != S_CRC && EPI.R_CRC != R_CRC {
+			return ID, errors.New("CRC match attempted with changed values")
+		}
+	}
+
+	EPI.S_CRC = S_CRC
+	EPI.R_CRC = R_CRC
+
+	MatchID := -1
+	for k, v := range C.EPMap {
+		if k == ID {
+			continue
+		}
+		if v.S_CRC == R_CRC && v.R_CRC == S_CRC {
+			MatchID = k
+			break
+		}
+	}
+	// NOPAIR
+	if MatchID == -1 {
+		return ID, nil
+	}
+
+	Match := C.EPMap[MatchID]
+	EPI.KludgePair = Match
+	Match.KludgePair = EPI
+
+	return MatchID, nil
 }

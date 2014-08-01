@@ -238,6 +238,37 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 			return "NOPAIR", nil
 		}
 		return fmt.Sprintf("PAIR %d", Pair), nil
+	case "THRESH_CRC_KLUDGE":
+		// THRESH_CRC_KLUDGE <endpoint id> <send_crc> <recv_crc>
+		if len(spaceDelimTokens) < 4 {
+			RErr = InsufficientArgsErr()
+			return
+		}
+		EP, err := strconv.Atoi(spaceDelimTokens[1])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		S_CRC, err := strconv.Atoi(spaceDelimTokens[2])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		R_CRC, err := strconv.Atoi(spaceDelimTokens[3])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+
+		Pair, err := Ctxt.crc_match(EP, S_CRC, R_CRC)
+		if err != nil {
+			RErr = UnknownErr(err.Error())
+			return
+		}
+		if Pair == EP {
+			return "NOPAIR", nil
+		}
+		return fmt.Sprintf("PAIR %d", Pair), nil
 	case "REREGISTER":
 		// REREGISTER EP PID FD
 		// TODO: Actually do something with PID/FD.
