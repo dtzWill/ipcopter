@@ -50,13 +50,16 @@ size_t &get_byte_counter(ipc_info &i, bool send) {
 }
 
 void update_stats(ipc_info &i, bool send, const void*buf, ssize_t cnt) {
+  size_t &bytes = get_byte_counter(i, send);
   if (cnt > 0) {
-    get_byte_counter(i, send) += cnt;
-    if (send) {
-      i.crc_sent.process_bytes(buf, cnt);
-    } else {
-      i.crc_recv.process_bytes(buf, cnt);
+    if (bytes < TRANS_THRESHOLD) {
+      if (send) {
+        i.crc_sent.process_bytes(buf, cnt);
+      } else {
+        i.crc_recv.process_bytes(buf, cnt);
+      }
     }
+    bytes += cnt;
   }
 }
 void update_stats_vec(ipc_info &i, bool send, const struct iovec *vec,
