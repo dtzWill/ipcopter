@@ -24,6 +24,10 @@ RUN apt-get install -y openssh-server
 RUN sed --in-place=.bak 's/without-password/yes/' /etc/ssh/sshd_config
 # ssh needs this directory
 RUN mkdir -p /var/run/sshd
+# Make PAM happy with SSH, this is needed regardless of ipcd use.
+# Snippet taken from issue: https://github.com/docker/docker/issues/5663
+RUN sed -ri 's/^session\s+required\s+pam_loginuid.so$/session optional pam_loginuid.so/' /etc/pam.d/sshd
+
 
 ENV HOME /root/
 
