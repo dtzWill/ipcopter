@@ -45,18 +45,47 @@ void copy_bufsizes(int src, int dst) {
   copy_bufsize(src, dst, SO_SNDBUF);
 }
 
+size_t &get_byte_counter(ipc_info &i, bool send) {
+  return send ? i.bytes_sent : i.bytes_recv;
+}
+
+void update_stats(ipc_info &i, bool send, const void*buf, ssize_t cnt) {
+  if (cnt > 0) {
+    get_byte_counter(i, send) += cnt;
+    if (send) {
+      i.crc_sent.process_bytes(buf, cnt);
+    } else {
+      i.crc_recv.process_bytes(buf, cnt);
+    }
+  }
+}
+void update_stats_vec(ipc_info &i, bool send, const struct iovec *vec,
+                      ssize_t cnt) {
+  int index = 0;
+  while (cnt > 0) {
+    int bytes = std::min(size_t(cnt), vec[index].iov_len);
+
+    update_stats(i, send, vec[index].iov_base, bytes);
+
+    cnt -= bytes;
+    ++index;
+  }
+}
+
+
 void attempt_optimization(int fd, bool send) {
   endpoint ep = getEP(fd);
   assert(valid_ep(ep));
   ipc_info &i = getInfo(ep);
   assert(i.state != STATE_INVALID);
 
-  size_t &bytes = send ? i.bytes_sent : i.bytes_recv;
-  if (bytes == TRANS_THRESHOLD) {
+  if (get_byte_counter(i, send) == TRANS_THRESHOLD) {
     ipclog("Completed partial operation to sync at THRESHOLD for fd=%d!\n", fd);
+
     // TODO: Async!
     endpoint remote = EP_INVALID;
     size_t attempts = 0;
+    ipclog("CRC's: %x, %x\n", i.crc_sent.checksum(), i.crc_recv.checksum());
     while (true) {
       remote = ipcd_endpoint_kludge(ep);
       if (remote != EP_INVALID)
@@ -96,16 +125,16 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
   assert(i.state != STATE_INVALID);
 
   // If localized, just use fast socket:
-  size_t &bytes = send ? i.bytes_sent : i.bytes_recv;
   if (i.state == STATE_OPTIMIZED) {
     ssize_t ret = IO(i.localfd, buf, count, flags);
-    if (ret != -1 && !(flags & MSG_PEEK)) {
-      bytes += ret;
+    if (!(flags & MSG_PEEK)) {
+      update_stats(i, send, buf, ret);
     }
     return ret;
   }
 
   // Otherwise, use original fd:
+  size_t &bytes = get_byte_counter(i, send);
   ssize_t rem = (TRANS_THRESHOLD - bytes);
   if (rem > 0 && size_t(rem) <= count) {
     ssize_t ret = IO(fd, buf, rem, flags);
@@ -114,7 +143,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
       return ret;
     }
 
-    bytes += ret;
+    update_stats(i, send, buf, ret);
     assert(bytes <= TRANS_THRESHOLD);
 
     attempt_optimization(fd, send);
@@ -126,11 +155,9 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
 
   ssize_t ret = IO(fd, buf, count, flags);
 
-  if (ret == -1 || (flags & MSG_PEEK))
-    return ret;
-
-  // Successful operation, add to running total.
-  bytes += ret;
+  if (!(flags & MSG_PEEK)) {
+    update_stats(i, send, buf, ret);
+  }
 
   return ret;
 }
@@ -176,12 +203,9 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
   assert(i.state != STATE_INVALID);
 
   // If localized, just use fast socket!
-  size_t &bytes_stat = send ? i.bytes_sent : i.bytes_recv;
   if (i.state == STATE_OPTIMIZED) {
     ssize_t ret = IO(i.localfd, vec, count);
-    if (ret != -1) {
-      bytes_stat += ret;
-    }
+    update_stats_vec(i, send, vec, ret);
     return ret;
   }
 
@@ -197,6 +221,7 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
     bytes += vec[i].iov_len;
   }
 
+  size_t &bytes_stat = get_byte_counter(i, send);
   ssize_t rem = (TRANS_THRESHOLD - bytes_stat);
   if (rem > 0 && size_t(rem) <= bytes) {
 
@@ -221,7 +246,7 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
     if (ret == -1)
       return ret;
 
-    bytes_stat += ret;
+    update_stats_vec(i, send, newvec, ret);
     assert(bytes_stat <= TRANS_THRESHOLD);
 
     attempt_optimization(fd, send);
@@ -229,17 +254,12 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
     return ret;
   }
 
-  ssize_t ret = IO(fd, vec, count);
-
   // We don't handle other states yet
   assert(i.state == STATE_UNOPT);
 
-  if (ret == -1)
-    return ret;
+  ssize_t ret = IO(fd, vec, count);
 
-  // Successful operation, add to running total.
-  bytes_stat += ret;
-
+  update_stats_vec(i, send, vec, ret);
   return ret;
 }
 
@@ -256,26 +276,21 @@ ssize_t do_ipc_sendmsg(int socket, const struct msghdr *message, int flags) {
   assert(i.state != STATE_INVALID);
 
   // If optimized, simply perform operation on local socket
-  size_t &bytes = i.bytes_sent;
   if (i.state == STATE_OPTIMIZED) {
     struct msghdr tmp = *message;
     tmp.msg_name = 0;
     tmp.msg_namelen = 0;
     ssize_t ret = __real_sendmsg(i.localfd, &tmp, flags);
-    if (ret != -1) {
-      bytes += ret;
-    }
+    update_stats_vec(i, true, tmp.msg_iov, ret);
     return ret;
   }
 
   ssize_t ret = __real_sendmsg(socket, message, flags);
-  if (ret != -1) {
-    ssize_t rem = (TRANS_THRESHOLD - bytes);
-    if (rem > 0 && rem <= ret) {
-      ipclog("Missed threshold due to sendmsg()!\n");
-      assert(0);
-    }
-    bytes += ret;
+  size_t bytes_before = i.bytes_sent;
+  update_stats_vec(i, true, message->msg_iov, ret);
+  if (bytes_before < TRANS_THRESHOLD && i.bytes_sent >= TRANS_THRESHOLD) {
+    ipclog("Missed threshold due to sendmsg()!\n");
+    assert(0);
   }
 
   return ret;
@@ -286,27 +301,28 @@ ssize_t do_ipc_recvmsg(int socket, struct msghdr *message, int flags) {
   assert(i.state != STATE_INVALID);
 
   // If optimized, simply perform operation on local socket
-  size_t &bytes = i.bytes_recv;
   if (i.state == STATE_OPTIMIZED) {
     struct msghdr tmp = *message;
     tmp.msg_name = 0;
     tmp.msg_namelen = 0;
     ssize_t ret = __real_recvmsg(i.localfd, &tmp, flags);
+    if (!(flags & MSG_PEEK)) {
+      update_stats_vec(i, false, tmp.msg_iov, ret);
+    }
     if (ret != -1) {
       *message = tmp;
-      bytes += ret;
     }
     return ret;
   }
 
   ssize_t ret = __real_recvmsg(socket, message, flags);
-  if (ret != -1) {
-    ssize_t rem = (TRANS_THRESHOLD - bytes);
-    if (rem > 0 && rem <= ret) {
-      ipclog("Missed threshold due to recvmsg()!\n");
-      assert(0);
-    }
-    bytes += ret;
+  size_t bytes_before = i.bytes_recv;
+  if (!(flags & MSG_PEEK)) {
+    update_stats_vec(i, false, message->msg_iov, ret);
+  }
+  if (bytes_before < TRANS_THRESHOLD && i.bytes_recv >= TRANS_THRESHOLD) {
+    ipclog("Missed threshold due to recvmsg()!\n");
+    assert(0);
   }
 
   return ret;

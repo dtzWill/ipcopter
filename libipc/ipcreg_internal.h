@@ -20,6 +20,8 @@
 #include <assert.h>
 #include <sys/epoll.h>
 
+#include <boost/crc.hpp>
+
 const unsigned TABLE_SIZE = 1 << 11;
 const int MAX_EPOLL_ENTRIES = 20;
 
@@ -52,16 +54,20 @@ typedef struct {
   epoll_info epoll;
 } fd_info;
 
-typedef struct {
+typedef struct ipc_info {
   // Bytes transmitted through this endpoint
   size_t bytes_sent;
   size_t bytes_recv;
+  boost::crc_32_type crc_sent;
+  boost::crc_32_type crc_recv;
   // Does this endpoint have a local fd?
   int localfd;
   uint16_t ref_count;
   EndpointState state;
   // Non-blocking is descriptor-specific
   bool non_blocking;
+
+  ipc_info() {}
 } ipc_info;
 
 typedef struct {

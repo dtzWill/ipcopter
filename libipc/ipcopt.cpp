@@ -92,6 +92,8 @@ void invalidate(endpoint ep) {
   i.localfd = 0;
   i.state = STATE_INVALID;
   i.non_blocking = false;
+  i.crc_sent.reset();
+  i.crc_recv.reset();
 }
 
 void register_inet_socket(int fd) {
@@ -108,6 +110,8 @@ void register_inet_socket(int fd) {
   assert(i.ref_count == 0);
   assert(i.state == STATE_INVALID);
   i.bytes_sent = i.bytes_recv = 0;
+  i.crc_sent.reset();
+  i.crc_recv.reset();
   i.localfd = 0;
   i.ref_count++;
   i.state = STATE_UNOPT;
