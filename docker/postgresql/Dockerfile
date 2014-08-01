@@ -24,7 +24,7 @@ ENV POSTGRES_PASS llvm
 RUN chmod 777 /tmp
 
 # By default, start the server and spawn a shell as the postgres user.
-CMD service postgresql start && ./modify_postgres_pass.sh && sudo -u postgres /bin/bash && service postgresql stop
+CMD service postgresql start && ./modify_postgres_pass.sh && (sudo -u postgres /bin/bash; service postgresql stop)
 
 
 # Inject latest versions of the library and daemon:
