@@ -37,8 +37,11 @@ RUN mkdir /root/.ssh && chmod 700 /root/.ssh && ssh-keygen -t rsa -N "" -f /root
 # More software
 RUN apt-get install -y pv netcat
 
-# Inject latest versions of the library and daemon:
+# Helpful scripts
 ADD start-sshd.sh /
+ADD nc-bi-test.sh /
+
+# Inject latest versions of the library and daemon:
 ADD tmp/ipcd /bin/
 ADD tmp/libipc.so /lib/
 
