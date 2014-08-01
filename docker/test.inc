@@ -33,7 +33,3 @@ EOF
 
 bench_normal
 bench_opt
-bench_normal
-bench_opt
-bench_normal
-bench_opt
