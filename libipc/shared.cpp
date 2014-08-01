@@ -19,7 +19,6 @@
 
 #include <poll.h>
 #include <stdarg.h>
-#include <security/pam_appl.h>
 
 BEGIN_EXTERN_C
 
@@ -180,7 +179,9 @@ int execvpe(const char *file, char *const argv[], char *const envp[]) {
   return __internal_execvpe(file, argv, envp);
 }
 
-int pam_open_session(pam_handle_t *pamh, int flags) {
+typedef uintptr_t pam_handle_ptr_t;
+int pam_open_session(pam_handle_ptr_t pamh, int flags);
+int pam_open_session(pam_handle_ptr_t pamh, int flags) {
   ipclog("pam_open_session!\n");
   void *libpam_handle = dlopen("libpam.so.0", RTLD_LAZY);
   assert(libpam_handle);
