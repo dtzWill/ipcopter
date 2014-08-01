@@ -226,8 +226,6 @@ char is_protected_fd(int fd) {
 void register_inherited_fds() {
   // We just forked, bump ref count
   // on the fd's we inherited.
-
-  ipclog("** THIS IS TEMPORARY KLUDGE **\n");
   for (unsigned fd = 0; fd < TABLE_SIZE; ++fd) {
     if (is_registered_socket(fd)) {
       endpoint ep = getEP(fd);
