@@ -29,7 +29,7 @@ rsync -c $IPCD_DIR/ipcd $BIN_DIR/
 
 cd $DIR
 TAG=$USER/ipc-$NAME
-docker build -t $TAG .
+docker build --force-rm -t $TAG .
 
 rm -rf $BIN_DIR
 
