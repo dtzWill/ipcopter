@@ -349,6 +349,32 @@ endpoint ipcd_endpoint_kludge(endpoint local) {
   return EP_INVALID;
 }
 
+endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc) {
+  ScopedLock L(getConnectLock());
+  connect_if_needed();
+
+  char buf[100];
+  int len = sprintf(buf, "THRESH_CRC_KLUDGE %d %d %d\n", local, s_crc, r_crc);
+  assert(len > 5);
+  int err = __real_write(ipcd_socket, buf, len);
+  if (err < 0) {
+    perror("write");
+    exit(1);
+  }
+  err = __real_read(ipcd_socket, buf, 50);
+  assert(err > 5);
+
+  buf[err] = 0;
+  int id;
+  ipclog("crc_kludge(%d, %d, %d) = %s\n", local, s_crc, r_crc, buf);
+  int n = sscanf(buf, "200 PAIR %d\n", &id);
+  if (n == 1) {
+    return id;
+  }
+
+  return EP_INVALID;
+}
+
 bool ipcd_is_protected(int fd) {
   return fd == ipcd_socket;
 }

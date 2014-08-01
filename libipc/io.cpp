@@ -90,7 +90,8 @@ void attempt_optimization(int fd, bool send) {
     size_t attempts = 0;
     ipclog("CRC's: %x, %x\n", i.crc_sent.checksum(), i.crc_recv.checksum());
     while (true) {
-      remote = ipcd_endpoint_kludge(ep);
+      remote =
+          ipcd_crc_kludge(ep, i.crc_sent.checksum(), i.crc_recv.checksum());
       if (remote != EP_INVALID)
         break;
       ++attempts;
