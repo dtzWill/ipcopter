@@ -49,6 +49,15 @@ size_t &get_byte_counter(ipc_info &i, bool send) {
   return send ? i.bytes_sent : i.bytes_recv;
 }
 
+char get_threshold_indicator_char(ipc_info &i, bool send) {
+  size_t bytes = get_byte_counter(i, send);
+  if (bytes > TRANS_THRESHOLD)
+    return '>';
+  if (bytes < TRANS_THRESHOLD)
+    return '<';
+  return '=';
+}
+
 void update_stats(ipc_info &i, bool send, const void*buf, ssize_t cnt) {
   size_t &bytes = get_byte_counter(i, send);
   if (cnt > 0) {
@@ -106,6 +115,10 @@ void attempt_optimization(int fd, bool send) {
     if (valid_ep(remote)) {
       ipclog("Found remote endpoint! Local=%d, Remote=%d Attempts=%zu!\n", ep,
              remote, attempts);
+      ipclog("Send counter %zu%c (%x), recv: %zu%c (%x)\n", i.bytes_sent,
+             get_threshold_indicator_char(i, true), i.crc_sent.checksum(),
+             i.bytes_recv, get_threshold_indicator_char(i, false),
+             i.crc_recv.checksum());
 
       bool success = ipcd_localize(ep, remote);
       assert(success && "Failed to localize! Sadtimes! :(");
