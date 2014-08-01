@@ -15,13 +15,11 @@ RUN apt-get install -y binutils build-essential git cmake
 RUN apt-get install -y gdb valgrind
 
 RUN apt-get install -y apache2
-
+RUN apt-get install -y apache2-utils
 RUN apt-get install -y wget curl links
 
 # Create test files
-RUN dd if=/dev/urandom of=/var/www/html/100M.bin bs=100M count=1
-RUN dd if=/dev/urandom of=/var/www/html/10M.bin bs=10M count=1
-RUN dd if=/dev/urandom of=/var/www/html/1M.bin bs=1M count=1
+RUN for s in 100M 10M 1M 100K 10K 1K; do dd if=/dev/urandom of=/var/www/html/$s.bin bs=$s count=1; done
 
 # Inject latest versions of the library and daemon:
 ADD tmp/ipcd /bin/
