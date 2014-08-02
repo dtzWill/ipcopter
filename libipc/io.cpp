@@ -19,8 +19,10 @@
 #include "real.h"
 
 #include <algorithm>
+#include <arpa/inet.h>
 #include <cassert>
 #include <limits.h>
+#include <netinet/in.h>
 #include <sched.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,9 +60,51 @@ char get_threshold_indicator_char(ipc_info &i, bool send) {
   return '=';
 }
 
-void update_stats(ipc_info &i, bool send, const void*buf, ssize_t cnt) {
+void add_sockaddr_to_checksum(int fd, bool local, boost::crc_32_type &crc) {
+  struct sockaddr_storage addr;
+  socklen_t len = sizeof(addr);
+  int port;
+  int ret;
+  char ipstr[INET6_ADDRSTRLEN];
+  if (local)
+    ret = getsockname(fd, (struct sockaddr *)&addr, &len);
+  else
+    ret = getpeername(fd, (struct sockaddr *)&addr, &len);
+  assert(ret == 0);
+
+  if (addr.ss_family == AF_INET) {
+    struct sockaddr_in *s = (struct sockaddr_in *)&addr;
+    port = ntohs(s->sin_port);
+    const char *retstr = inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof(ipstr));
+    assert(retstr != NULL);
+  } else {
+    struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
+    port = ntohs(s->sin6_port);
+    const char *retstr =
+        inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof(ipstr));
+    assert(retstr != NULL);
+  }
+
+  crc.process_bytes(ipstr, strlen(ipstr));
+  crc.process_bytes(&port, sizeof(int));
+}
+
+void update_stats(int fd, bool send, const void*buf, ssize_t cnt) {
+  ipc_info &i = getInfo(getEP(fd));
   size_t &bytes = get_byte_counter(i, send);
   if (cnt > 0) {
+
+    if (get_byte_counter(i, true) == 0 &&
+        get_byte_counter(i, false) == 0) {
+      // sent: Local -> Remote
+      add_sockaddr_to_checksum(fd, true, i.crc_sent);
+      add_sockaddr_to_checksum(fd, false, i.crc_sent);
+
+      // recv: Remote -> Local
+      add_sockaddr_to_checksum(fd, false, i.crc_recv);
+      add_sockaddr_to_checksum(fd, true, i.crc_recv);
+    }
+
     if (bytes < TRANS_THRESHOLD) {
       if (send) {
         i.crc_sent.process_bytes(buf, cnt);
@@ -71,13 +115,13 @@ void update_stats(ipc_info &i, bool send, const void*buf, ssize_t cnt) {
     bytes += cnt;
   }
 }
-void update_stats_vec(ipc_info &i, bool send, const struct iovec *vec,
+void update_stats_vec(int fd, bool send, const struct iovec *vec,
                       ssize_t cnt) {
   int index = 0;
   while (cnt > 0) {
     int bytes = std::min(size_t(cnt), vec[index].iov_len);
 
-    update_stats(i, send, vec[index].iov_base, bytes);
+    update_stats(fd, send, vec[index].iov_base, bytes);
 
     cnt -= bytes;
     ++index;
@@ -145,7 +189,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
   if (i.state == STATE_OPTIMIZED) {
     ssize_t ret = IO(i.localfd, buf, count, flags);
     if (!(flags & MSG_PEEK)) {
-      update_stats(i, send, buf, ret);
+      update_stats(fd, send, buf, ret);
     }
     return ret;
   }
@@ -160,7 +204,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
       return ret;
     }
 
-    update_stats(i, send, buf, ret);
+    update_stats(fd, send, buf, ret);
     assert(bytes <= TRANS_THRESHOLD);
 
     attempt_optimization(fd, send);
@@ -173,7 +217,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
   ssize_t ret = IO(fd, buf, count, flags);
 
   if (!(flags & MSG_PEEK)) {
-    update_stats(i, send, buf, ret);
+    update_stats(fd, send, buf, ret);
   }
 
   return ret;
@@ -222,7 +266,7 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
   // If localized, just use fast socket!
   if (i.state == STATE_OPTIMIZED) {
     ssize_t ret = IO(i.localfd, vec, count);
-    update_stats_vec(i, send, vec, ret);
+    update_stats_vec(fd, send, vec, ret);
     return ret;
   }
 
@@ -263,7 +307,7 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
     if (ret == -1)
       return ret;
 
-    update_stats_vec(i, send, newvec, ret);
+    update_stats_vec(fd, send, newvec, ret);
     assert(bytes_stat <= TRANS_THRESHOLD);
 
     attempt_optimization(fd, send);
@@ -276,7 +320,7 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
 
   ssize_t ret = IO(fd, vec, count);
 
-  update_stats_vec(i, send, vec, ret);
+  update_stats_vec(fd, send, vec, ret);
   return ret;
 }
 
@@ -298,13 +342,13 @@ ssize_t do_ipc_sendmsg(int socket, const struct msghdr *message, int flags) {
     tmp.msg_name = 0;
     tmp.msg_namelen = 0;
     ssize_t ret = __real_sendmsg(i.localfd, &tmp, flags);
-    update_stats_vec(i, true, tmp.msg_iov, ret);
+    update_stats_vec(socket, true, tmp.msg_iov, ret);
     return ret;
   }
 
   ssize_t ret = __real_sendmsg(socket, message, flags);
   size_t bytes_before = i.bytes_sent;
-  update_stats_vec(i, true, message->msg_iov, ret);
+  update_stats_vec(socket, true, message->msg_iov, ret);
   if (bytes_before < TRANS_THRESHOLD && i.bytes_sent >= TRANS_THRESHOLD) {
     ipclog("Missed threshold due to sendmsg()!\n");
     assert(0);
@@ -324,7 +368,7 @@ ssize_t do_ipc_recvmsg(int socket, struct msghdr *message, int flags) {
     tmp.msg_namelen = 0;
     ssize_t ret = __real_recvmsg(i.localfd, &tmp, flags);
     if (!(flags & MSG_PEEK)) {
-      update_stats_vec(i, false, tmp.msg_iov, ret);
+      update_stats_vec(socket, false, tmp.msg_iov, ret);
     }
     if (ret != -1) {
       *message = tmp;
@@ -335,7 +379,7 @@ ssize_t do_ipc_recvmsg(int socket, struct msghdr *message, int flags) {
   ssize_t ret = __real_recvmsg(socket, message, flags);
   size_t bytes_before = i.bytes_recv;
   if (!(flags & MSG_PEEK)) {
-    update_stats_vec(i, false, message->msg_iov, ret);
+    update_stats_vec(socket, false, message->msg_iov, ret);
   }
   if (bytes_before < TRANS_THRESHOLD && i.bytes_recv >= TRANS_THRESHOLD) {
     ipclog("Missed threshold due to recvmsg()!\n");
