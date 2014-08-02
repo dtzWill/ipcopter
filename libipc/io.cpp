@@ -255,6 +255,25 @@ ssize_t do_ipc_recvfrom(int fd, void *buffer, size_t length, int flags,
   return do_ipc_recv(fd, buffer, length, flags);
 }
 
+int truncate_iov(struct iovec newvec[100], const struct iovec *vec,
+                 size_t bytes, int count) {
+  assert(100 > count);
+
+  int newcount = 0;
+  for (; newcount < count &&bytes != 0; ++newcount) {
+    int copy = std::min(bytes, vec[newcount].iov_len);
+
+    // Put this iov into our newvec
+    newvec[newcount].iov_base = vec[newcount].iov_base;
+    newvec[newcount].iov_len = copy;
+
+    bytes -= copy;
+  }
+  assert(bytes == 0);
+
+  return newcount;
+}
+
 template <typename IOVFunc>
 ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
                    bool send) {
@@ -288,19 +307,7 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
 
     // Need to construct alternate iovec!
     iovec newvec[100];
-    assert(100 > count);
-
-    int newcount = 0;
-    for (; newcount < count && rem != 0; ++newcount) {
-      int copy = std::min(size_t(rem), vec[newcount].iov_len);
-
-      // Put this iov into our newvec
-      newvec[newcount].iov_base = vec[newcount].iov_base;
-      newvec[newcount].iov_len = copy;
-
-      rem -= copy;
-    }
-    assert(rem == 0);
+    int newcount = truncate_iov(newvec, vec, size_t(rem), count);
 
     ssize_t ret = IO(fd, newvec, newcount);
 
@@ -346,12 +353,47 @@ ssize_t do_ipc_sendmsg(int socket, const struct msghdr *message, int flags) {
     return ret;
   }
 
+  size_t bytes = 0;
+  int count = message->msg_iovlen;
+  for (int i = 0; i < count; ++i) {
+    // Overflow check...
+    if (SSIZE_MAX - bytes < message->msg_iov[i].iov_len) {
+      // We could try to set errno here,
+      // but easier to just let actual handler do this:
+      return __real_sendmsg(socket, message, flags);
+    }
+
+    bytes += message->msg_iov[i].iov_len;
+  }
+
+  size_t &bytes_stat = get_byte_counter(i, true);
+  ssize_t rem = (TRANS_THRESHOLD - bytes_stat);
+  if (rem > 0 && size_t(rem) <= bytes) {
+
+    iovec newvec[100];
+    int newcount = truncate_iov(newvec, message->msg_iov, size_t(rem), count);
+
+    struct msghdr newmsg = *message;
+    newmsg.msg_iov = newvec;
+    newmsg.msg_iovlen = newcount;
+    ssize_t ret = __real_sendmsg(socket, &newmsg, flags);
+
+    if (ret == -1) {
+      return ret;
+    }
+
+    update_stats_vec(socket, true, newvec, ret);
+    assert(bytes_stat <= TRANS_THRESHOLD);
+
+    attempt_optimization(socket, true);
+
+    return ret;
+  }
+
   ssize_t ret = __real_sendmsg(socket, message, flags);
-  size_t bytes_before = i.bytes_sent;
-  update_stats_vec(socket, true, message->msg_iov, ret);
-  if (bytes_before < TRANS_THRESHOLD && i.bytes_sent >= TRANS_THRESHOLD) {
-    ipclog("Missed threshold due to sendmsg()!\n");
-    assert(0);
+
+  if (ret != -1) {
+    update_stats_vec(socket, true, message->msg_iov, ret);
   }
 
   return ret;
@@ -376,14 +418,49 @@ ssize_t do_ipc_recvmsg(int socket, struct msghdr *message, int flags) {
     return ret;
   }
 
+  size_t bytes = 0;
+  int count = message->msg_iovlen;
+  for (int i = 0; i < count; ++i) {
+    // Overflow check...
+    if (SSIZE_MAX - bytes < message->msg_iov[i].iov_len) {
+      // We could try to set errno here,
+      // but easier to just let actual handler do this:
+      return __real_recvmsg(socket, message, flags);
+    }
+
+    bytes += message->msg_iov[i].iov_len;
+  }
+
+  size_t &bytes_stat = get_byte_counter(i, false);
+  ssize_t rem = (TRANS_THRESHOLD - bytes_stat);
+  if (rem > 0 && size_t(rem) <= bytes) {
+    iovec newvec[100];
+    int newcount = truncate_iov(newvec, message->msg_iov, rem, count);
+
+    struct msghdr newmsg = *message;
+    newmsg.msg_iov = newvec;
+    newmsg.msg_iovlen = newcount;
+    ssize_t ret = __real_recvmsg(socket, &newmsg, flags);
+
+    if (ret == -1)
+      return ret;
+    if (flags & MSG_PEEK)
+      return ret;
+
+    // Copy message out to reader
+    *message = newmsg;
+
+    update_stats_vec(socket, false, newvec, ret);
+    assert(bytes_stat <= TRANS_THRESHOLD);
+
+    attempt_optimization(socket, false);
+
+    return ret;
+  }
+
   ssize_t ret = __real_recvmsg(socket, message, flags);
-  size_t bytes_before = i.bytes_recv;
   if (!(flags & MSG_PEEK)) {
     update_stats_vec(socket, false, message->msg_iov, ret);
-  }
-  if (bytes_before < TRANS_THRESHOLD && i.bytes_recv >= TRANS_THRESHOLD) {
-    ipclog("Missed threshold due to recvmsg()!\n");
-    assert(0);
   }
 
   return ret;
