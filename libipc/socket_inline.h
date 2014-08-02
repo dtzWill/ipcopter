@@ -34,6 +34,11 @@
 int __attribute((used)) __only_include_once = 0;
 
 static inline int __internal_socket(int domain, int type, int protocol) {
+  // For now, don't support ipv6.
+  if (domain == AF_INET6) {
+    errno = EAFNOSUPPORT;
+    return -1;
+  }
   int fd = __real_socket(domain, type, protocol);
 
   bool ip_domain = (domain == AF_INET) || (domain == AF_INET6);
