@@ -4,7 +4,7 @@ PORTS=`seq 3000 3010`
 
 echo "Starting 'servers'..."
 for p in $PORTS; do
-	dd if=/dev/zero bs=1M count=1000 status=none|nc -dlp $p|pv -f > /dev/null 2> nc.server.$p.log &
+	dd if=/dev/zero bs=1M count=1000 status=none|nc -lp $p|pv -f > /dev/null 2> nc.server.$p.log &
 done
 sleep 1
 echo "Starting 'clients'..."
