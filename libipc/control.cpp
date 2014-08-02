@@ -17,10 +17,10 @@
 #include "ipcd.h"
 #include "ipcreg_internal.h"
 #include "real.h"
-#include "string.h"
 
 #include <algorithm>
 #include <fcntl.h>
+#include <string.h>
 
 int do_ipc_shutdown(int sockfd, int how) {
   ipc_info &i = getInfo(getEP(sockfd));
@@ -32,7 +32,9 @@ int do_ipc_shutdown(int sockfd, int how) {
   if (i.state == STATE_OPTIMIZED) {
     assert(i.localfd);
     int localret = __real_shutdown(i.localfd, how);
-    assert(localret == ret); // We don't handle mismatch yet
+    if (localret == 0 && ret == -1) {
+      ipclog("shutdown(%d, %d) error, local succeeded\n", sockfd, how);
+    }
   }
 
   return ret;
