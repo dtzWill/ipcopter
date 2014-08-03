@@ -90,8 +90,8 @@ struct libipc_state {
 
 extern libipc_state state;
 
-static inline char inbounds_fd(int fd) { return (unsigned)fd <= TABLE_SIZE; }
-static inline char valid_ep(endpoint ep) { return (unsigned)ep <= TABLE_SIZE; }
+static inline char inbounds_fd(int fd) { return (unsigned)fd < TABLE_SIZE; }
+static inline char valid_ep(endpoint ep) { return (unsigned)ep < TABLE_SIZE; }
 
 static inline fd_info &getFDInfo(int fd) {
   if (!inbounds_fd(fd)) {
