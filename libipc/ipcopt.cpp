@@ -161,7 +161,9 @@ void unregister_inet_socket(int fd) {
   }
 }
 
-char is_registered_socket(int fd) { return getEP(fd) != EP_INVALID; }
+char is_registered_socket(int fd) {
+  return inbounds_fd(fd) && (getEP(fd) != EP_INVALID);
+}
 
 char is_optimized_socket_safe(int fd) {
   if (!inbounds_fd(fd) || is_local(fd))
