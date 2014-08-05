@@ -146,12 +146,30 @@ void __attribute__((destructor)) ipcd_dtor() {
   assert(ipcd_socket != 0);
   assert(mypid != 0);
 
+  // TODO: REMOVEALL is goodness, but we don't presently
+  // correctly associate PID's with endpoints they own in ipcd.
+  // Partially due to the mechanism for REREGISTER being
+  // performed 'eagerly' before the child PID is known,
+  // and partially due to a need to update ipcd's datastructures.
+
+  // This needs to be done eventually anyway, to provide
+  // access control restrictions on who can unregister,
+  // optimize, etc. a given endpoint.
+
+  // For now, explicitly unregister all endpoints we know we own.
+  // XXX: This is done in ipcopt.cpp since this code
+  // doesn't have access to our state table, just ipcd.
+
+  // Return instead of REMOVEALL to avoid
+  // duplicate UNREGISTER.
+  return;
+
   char buf[100];
   int len = sprintf(buf, "REMOVEALL %d\n", mypid);
   assert(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
-    ipclog("Error sending ipcd REMOVALL command in dtor: %s\n",
+    ipclog("Error sending ipcd REMOVEALL command in dtor: %s\n",
            strerror(errno));
     return;
   }

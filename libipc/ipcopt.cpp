@@ -75,6 +75,10 @@ void __attribute__((destructor)) ipcopt_fini() {
 
     }
 
+  // And ensure they're unregistered!
+  for (unsigned i = 0; i < TABLE_SIZE; ++i)
+    if (is_registered_socket(i))
+      unregister_inet_socket(i);
 }
 
 void invalidate(endpoint ep) {
