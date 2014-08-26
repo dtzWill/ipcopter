@@ -44,6 +44,14 @@ const char *getShmName() {
 
 int get_shm(int flags, mode_t mode) {
   int fd = shm_open(getShmName(), flags, mode);
+  if (fd == EEXIST) {
+    ipclog("Shared memory segment exists, attempting to remove it...\n");
+    int ret = shm_unlink(getShmName());
+    UC(ret, "Closing existing shm");
+
+    // Okay, let's try this again
+    fd = shm_open(getShmName(), flags, mode);
+  }
   UC(fd, "shm_open");
   UC(fchmod(fd, mode), "fchmod on shared memory segment");
   return fd;
