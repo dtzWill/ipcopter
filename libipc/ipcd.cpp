@@ -149,13 +149,13 @@ void __attribute__((destructor)) ipcd_dtor() {
   char buf[100];
   int len = sprintf(buf, "REMOVEALL %d\n", mypid);
   assert(len > 5);
-  int err = __real_write(ipcd_socket, buf, len);
+  int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     ipclog("Error sending ipcd REMOVALL command in dtor: %s\n",
            strerror(errno));
     exit(1);
   }
-  err = __real_read(ipcd_socket, buf, 50);
+  err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
   assert(err > 5);
 
   const char *match = "200 REMOVED ";
@@ -193,14 +193,14 @@ endpoint ipcd_register_socket(int fd) {
 
   assert(ipcd_socket);
   // ipclog("REGISTER %d -->\n", fd);
-  int err = __real_write(ipcd_socket, buf, len);
+  int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
     exit(1);
   }
 
   // ipclog("REGISTER %d <--\n", fd);
-  err = __real_read(ipcd_socket, buf, 50);
+  err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
   assert(err > 5);
 
   buf[err] = 0;
@@ -220,12 +220,12 @@ bool ipcd_localize(endpoint local, endpoint remote) {
   char buf[100];
   int len = sprintf(buf, "LOCALIZE %d %d\n", local, remote);
   assert(len > 5);
-  int err = __real_write(ipcd_socket, buf, len);
+  int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
     exit(1);
   }
-  err = __real_read(ipcd_socket, buf, 50);
+  err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
   assert(err > 5);
 
   return strncmp(buf, "200 OK\n", err) == 0;
@@ -239,7 +239,7 @@ int ipcd_getlocalfd(endpoint local) {
   char buf[100];
   int len = sprintf(buf, "GETLOCALFD %d\n", local);
   assert(len > 5);
-  int err = __real_write(ipcd_socket, buf, len);
+  int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
     exit(1);
@@ -264,7 +264,7 @@ int ipcd_getlocalfd(endpoint local) {
     msg.msg_control = cmsg;
     msg.msg_controllen = CONTROLLEN;
 
-    int ret = recvmsg(ipcd_socket, &msg, 0);
+    int ret = recvmsg(ipcd_socket, &msg, MSG_NOSIGNAL);
     if (ret <= 0) {
       perror("recvmsg");
       exit(1);
@@ -276,7 +276,7 @@ int ipcd_getlocalfd(endpoint local) {
     ipclog("received local fd %d for endpoint %d\n", fd, local);
   }
 
-  err = __real_read(ipcd_socket, buf, 50);
+  err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
   assert(err > 5);
 
   bool success = strncmp(buf, "200 OK\n", err) == 0;
@@ -293,12 +293,12 @@ bool ipcd_unregister_socket(endpoint ep) {
   char buf[100];
   int len = sprintf(buf, "UNREGISTER %d\n", ep);
   assert(len > 5);
-  int err = __real_write(ipcd_socket, buf, len);
+  int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
     exit(1);
   }
-  err = __real_read(ipcd_socket, buf, 50);
+  err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
   assert(err > 5);
 
   return strncmp(buf, "200 OK\n", err) == 0;
@@ -312,12 +312,12 @@ bool ipcd_reregister_socket(endpoint ep, int fd) {
   char buf[100];
   int len = sprintf(buf, "REREGISTER %d %d %d\n", ep, getpid(), fd);
   assert(len > 5);
-  int err = __real_write(ipcd_socket, buf, len);
+  int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
     exit(1);
   }
-  err = __real_read(ipcd_socket, buf, 50);
+  err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
   assert(err > 5);
 
   return strncmp(buf, "200 OK\n", err) == 0;
@@ -330,12 +330,12 @@ endpoint ipcd_endpoint_kludge(endpoint local) {
   char buf[100];
   int len = sprintf(buf, "ENDPOINT_KLUDGE %d\n", local);
   assert(len > 5);
-  int err = __real_write(ipcd_socket, buf, len);
+  int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
     exit(1);
   }
-  err = __real_read(ipcd_socket, buf, 50);
+  err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
   assert(err > 5);
 
   buf[err] = 0;
@@ -356,12 +356,12 @@ endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc) {
   char buf[100];
   int len = sprintf(buf, "THRESH_CRC_KLUDGE %d %d %d\n", local, s_crc, r_crc);
   assert(len > 5);
-  int err = __real_write(ipcd_socket, buf, len);
+  int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
     exit(1);
   }
-  err = __real_read(ipcd_socket, buf, 50);
+  err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
   assert(err > 5);
 
   buf[err] = 0;
