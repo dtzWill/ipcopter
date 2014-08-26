@@ -24,6 +24,18 @@
 #include <errno.h>
 #include <string.h>
 
+#define UC(ret, msg) \
+  unixCheck(ret, msg, __FILE__, __LINE__, __PRETTY_FUNCTION__);
+
+void unixCheck(int ret, const char *msg, const char *file, unsigned line,
+               const char *func, int err = errno) {
+  if (ret == -1) {
+    ipclog("Unix call failed in %s at %s:%u: %s - %s\n", func, file, line, msg,
+           strerror(err));
+    abort();
+  }
+}
+
 static char buf[100];
 const char *getShmName() {
   sprintf(buf, "/ipcd.%d\n", getpid());
@@ -32,19 +44,15 @@ const char *getShmName() {
 
 int get_shm(int flags, mode_t mode) {
   int fd = shm_open(getShmName(), flags, mode);
-  if (fd != -1) {
-    int ret = fchmod(fd, mode);
-    if (ret == -1) {
-      ipclog("Failure setting shared memory permissions: %s\n", strerror(errno));
-    }
-  }
+  UC(fd, "shm_open");
+  UC(fchmod(fd, mode), "fchmod on shared memory segment");
   return fd;
 }
 
 void shm_state_save() {
   // Create shared memory segment
   int fd = get_shm(O_RDWR | O_CREAT | O_EXCL, 0600);
-  assert(fd != -1);
+  UC(fd, "get_shm");
 
   bool success = rename_fd(fd, MAGIC_SHM_FD, /* cloexec */ false);
   assert(success && "Failed to rename SHM fd!");
@@ -54,11 +62,11 @@ void shm_state_save() {
   assert(flags >= 0);
   flags &= ~FD_CLOEXEC;
   int ret = __real_fcntl_int(MAGIC_SHM_FD, F_SETFD, flags);
-  assert(ret != -1);
+  UC(ret, "fcntl CLOEXEC on shared memory segment");
 
   // Size the memory segment:
   ret = ftruncate(MAGIC_SHM_FD, sizeof(libipc_state));
-  assert(ret != -1);
+  UC(ret, "ftruncate on shm");
 
   void *stateptr = mmap(NULL, sizeof(libipc_state), PROT_READ | PROT_WRITE,
                   MAP_SHARED, MAGIC_SHM_FD, 0);
@@ -69,7 +77,7 @@ void shm_state_save() {
 
   // Unmap, but don't unlink the shared memory
   ret = munmap(stateptr, sizeof(libipc_state));
-  assert(ret != -1);
+  UC(ret, "unmap shm");
 
   ipclog("State saved!\n");
 }
@@ -95,13 +103,13 @@ void shm_state_restore() {
   state = *(libipc_state*)stateptr;
 
   int ret = munmap(stateptr, sizeof(libipc_state));
-  assert(ret != -1);
+  UC(ret, "unmap shm");
 
   // Done with the shared segment, thank you!
   ret = __real_close(MAGIC_SHM_FD);
-  assert(ret != -1);
+  UC(ret, "close shm");
   ret = shm_unlink(getShmName());
-  assert(ret != -1);
+  UC(ret, "shm_unlink after close");
 
   ipclog("State restored!\n");
 }
@@ -114,7 +122,7 @@ void shm_state_destroy() {
   assert(ret == 0);
 
   ret = shm_unlink(getShmName());
-  assert(ret != -1);
+  UC(ret, "shm_unlink");
 
   ipclog("Destroyed saved state!\n");
 }
