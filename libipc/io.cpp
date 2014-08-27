@@ -209,10 +209,12 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
 
     attempt_optimization(fd, send);
 
-    // If we were sending and have more to send, try to do so now...
-    if (send && rem > 0) {
-      buf_t buf2 = buf_t(uintptr_t(buf) + rem);
-      int ret2 = do_ipc_io(fd, buf2, rem, flags, IO, send);
+    // If we truncated this operation, attempt to continue it
+    assert(count >= size_t(ret));
+    size_t left = count - size_t(ret);
+    if (left > 0) {
+      buf_t buf2 = buf_t(uintptr_t(buf) + ret);
+      int ret2 = do_ipc_io(fd, buf2, left, flags, IO, send);
       // Eek, this only is okay if second call succeeds... *cross fingers*
       assert(ret2 != -1);
       return ret + ret2;
