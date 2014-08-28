@@ -87,5 +87,8 @@ extern "C" void __assert_fail(const char *assertion, const char *file,
                               unsigned int line, const char *function) {
   ipclog("Assertion '%s' failed at %s:%d in %s\n", assertion, file, line,
          function);
+  // Try to print same error to stderr
+  fprintf(stderr, "Assertion '%s' failed at %s:%d in %s\n", assertion, file,
+          line, function);
   abort();
 }
