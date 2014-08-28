@@ -23,7 +23,7 @@
 #include <boost/crc.hpp>
 
 const unsigned TABLE_SIZE = 1 << 11;
-const int MAX_EPOLL_ENTRIES = 20;
+const unsigned MAX_EPOLL_ENTRIES = 50;
 
 enum EndpointState {
   STATE_INVALID = 0,
