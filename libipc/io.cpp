@@ -209,15 +209,32 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
 
     attempt_optimization(fd, send);
 
-    // If we truncated this operation, attempt to continue it
+    // Did we truncate a blocking operation?
+
+    // Only continue operation if socket is blocking
+    // (otherwise the app definitely should be okay with short ops)
+    bool continue_partial_op = !i.non_blocking;
+    // Did we truncate from originally requested amount?
     assert(count >= size_t(ret));
     size_t left = count - size_t(ret);
-    if (left > 0) {
+    continue_partial_op &= (left > 0);
+    // Did we receive the full amount requested?
+    // If not, requesting the original amount
+    // instead would have similarly returned a shorter amount.
+    continue_partial_op &= (ret == rem);
+
+    if (continue_partial_op) {
+      ipclog("Attempting to continue partial op...fd=%d, count=%zu, left=%zu\n",
+             fd, count, left);
       buf_t buf2 = buf_t(uintptr_t(buf) + ret);
-      int ret2 = do_ipc_io(fd, buf2, left, flags, IO, send);
-      // Eek, this only is okay if second call succeeds... *cross fingers*
-      assert(ret2 != -1);
-      return ret + ret2;
+      // Use MSG_DONTWAIT to get data already in buffer, no more.
+      // Reasoning: original blocking call returned for some reason,
+      // and we're only interested in patching around the reason
+      // being that we requested fewer bytes than were available.
+      ssize_t ret2 = do_ipc_io(fd, buf2, left, flags | MSG_DONTWAIT, IO, send);
+      if (ret2 != -1) {
+        ret += ret2;
+      }
     }
 
     return ret;
