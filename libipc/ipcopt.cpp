@@ -77,8 +77,20 @@ void __attribute__((destructor)) ipcopt_fini() {
 
   // And ensure they're unregistered!
   for (unsigned i = 0; i < TABLE_SIZE; ++i)
-    if (is_registered_socket(i))
-      unregister_inet_socket(i);
+    if (is_registered_socket(i)) {
+      // Don't use unregister_inet_socket--
+      // we don't want to change state that may
+      // break concurrently executing threads,
+      // only to let IPCD know we're done with it.
+
+      endpoint ep = getEP(i);
+      if (--getInfo(ep).ref_count == 0) {
+        bool success = ipcd_unregister_socket(ep);
+        if (!success) {
+          ipclog("Failure unregistering socket in destructor!\n");
+        }
+      }
+    }
 }
 
 void invalidate(endpoint ep) {
