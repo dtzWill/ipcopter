@@ -14,7 +14,7 @@ WARNFLAGS := -Wall -Wextra -Werror
 EXTRAFLAGS := -fPIC -fno-strict-aliasing
 SHARED_FLAGS := $(OPTFLAGS) $(WARNFLAGS) $(EXTRAFLAGS)
 CFLAGS := $(SHARED_FLAGS)
-CXXFLAGS := $(SHARED_FLAGS) -std=gnu++11
+CXXFLAGS := $(SHARED_FLAGS) #-std=gnu++11
 
 C_DEPS := $(wildcard *.c)
 CXX_DEPS := $(wildcard *.cpp)
