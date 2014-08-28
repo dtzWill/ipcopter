@@ -282,7 +282,7 @@ int ipcd_getlocalfd(endpoint local) {
     msg.msg_control = cmsg;
     msg.msg_controllen = CONTROLLEN;
 
-    int ret = recvmsg(ipcd_socket, &msg, MSG_NOSIGNAL);
+    int ret = __real_recvmsg(ipcd_socket, &msg, MSG_NOSIGNAL);
     if (ret <= 0) {
       perror("recvmsg");
       exit(1);
