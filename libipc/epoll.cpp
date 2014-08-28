@@ -129,6 +129,8 @@ int __internal_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
         epoll_entry &new_entry = ei.entries[ei.count++];
         new_entry.fd = addfd;
         new_entry.event = *event;
+
+        assert(ei.count <= MAX_EPOLL_ENTRIES);
       }
       return ret;
     }
