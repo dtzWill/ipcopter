@@ -120,9 +120,21 @@ void connect_to_ipcd() {
         exit(1);
       }
     } else {
-      perror("connect");
-      ipclog("Error connecting to ipcd?\n");
-      exit(1);
+      // Race with socket creation and permissions, maybe?
+      ipclog("Connect failed, attempting a few more times...\n");
+      int attempts = 0;
+      const int MAX_ATTEMPTS = 10;
+      while (attempts < MAX_ATTEMPTS) {
+        usleep(SLEEP_AFTER_IPCD_START_INTERVAL);
+        if (__real_connect(s, (struct sockaddr *)&remote, len) != -1)
+          break;
+        ++attempts;
+      }
+      if (attempts == MAX_ATTEMPTS) {
+        perror("Connect to ipcd socket");
+        ipclog("Error connecting to ipcd?\n");
+        exit(1);
+      }
     }
   }
 
