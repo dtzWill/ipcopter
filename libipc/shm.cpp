@@ -59,7 +59,7 @@ int get_shm(int flags, mode_t mode) {
 
 void shm_state_save() {
   // Create shared memory segment
-  int fd = get_shm(O_RDWR | O_CREAT | O_EXCL, 0600);
+  int fd = get_shm(O_RDWR | O_CREAT | O_EXCL, 0777);
   UC(fd, "get_shm");
 
   bool success = rename_fd(fd, MAGIC_SHM_FD, /* cloexec */ false);
