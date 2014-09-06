@@ -1,6 +1,6 @@
 # Build memcached container with our ipcopter tech installed
 # http://docs.docker.com/reference/builder/
-FROM ubuntu:14.10
+FROM ubuntu:14.04
 MAINTAINER Will Dietz <w@wdtz.org>
 
 RUN sed -i 's@main restricted@main restricted multiverse@' /etc/apt/sources.list
