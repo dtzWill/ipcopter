@@ -109,7 +109,9 @@ int __internal_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
   // neither entry exists:
   if (!opt_entry && !unopt_entry && op != EPOLL_CTL_ADD) {
     // Forward requested operation, it will fail regardless
-    return __real_epoll_ctl(epfd, op, fd, event);
+    int ret = __real_epoll_ctl(epfd, op, fd, event);
+    assert(ret == -1 && "Expected epoll_ctl() to fail, but didn't");
+    return ret;
   }
 
   switch (op) {
@@ -117,11 +119,15 @@ int __internal_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
     // Okay, we're adding it.
 
     // If already added, let real epoll return error:
-    if (opt_entry)
-      return __real_epoll_ctl(epfd, EPOLL_CTL_ADD, localfd, event);
-    else if (unopt_entry)
-      return __real_epoll_ctl(epfd, EPOLL_CTL_ADD, localfd, event);
-    else {
+    if (opt_entry) {
+      int ret = __real_epoll_ctl(epfd, EPOLL_CTL_ADD, localfd, event);
+      assert(ret == -1 && "Expected epoll_ctl() to fail, but didn't");
+      return ret;
+    } else if (unopt_entry) {
+      int ret = __real_epoll_ctl(epfd, EPOLL_CTL_ADD, localfd, event);
+      assert(ret == -1 && "Expected epoll_ctl() to fail, but didn't");
+      return ret;
+    } else {
       int addfd = (localfd != -1) ? localfd : fd;
       int ret = __real_epoll_ctl(epfd, EPOLL_CTL_ADD, addfd, event);
       // Add to our epoll entries list for this epfd:
@@ -131,6 +137,8 @@ int __internal_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
         new_entry.event = *event;
 
         assert(ei.count <= MAX_EPOLL_ENTRIES);
+      } else {
+        ipclog("EPOLL_CTL_ADD failed!\n");
       }
       return ret;
     }
@@ -166,8 +174,13 @@ int __internal_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
     }
     return ret;
   }
+  default:
+    ipclog("Unexpected EPOLL op: %d\n", op);
+    break;
   }
 
   // Invalid epoll operation, forward
-  return __real_epoll_ctl(epfd, op, fd, event);
+  int ret = __real_epoll_ctl(epfd, op, fd, event);
+  assert((ret == -1) && "Expected epoll_ctl() call to fail, but didn't");
+  return ret;
 }
