@@ -62,6 +62,7 @@ void __ipcopt_init() {
 }
 
 void __attribute__((destructor)) ipcopt_fini() {
+  ipclog("ipcopt_fini()!\n");
   for (unsigned i = 0; i < TABLE_SIZE; ++i)
     if (is_registered_socket(i)) {
       endpoint ep = getEP(i);

@@ -151,6 +151,7 @@ void __ipcd_init() {
 }
 
 void __attribute__((destructor)) ipcd_dtor() {
+  ipclog("ipcd_dtor()!\n");
   if (ipcd_socket == 0) {
     ipclog("Exiting without establishing connection to ipcd...\n");
     return;
