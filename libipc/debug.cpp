@@ -21,7 +21,9 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <sys/errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -51,10 +53,23 @@ FILE *getlogfp() {
   }
 
 
-  const char *pid_template = "/tmp/ipcd.%d.log";
+  const char *log_dir = "/tmp/ipcd";
   char buf[100];
 
-  sprintf(buf, pid_template, newmypid);
+  int err = mkdir(log_dir, 0777);
+  if (err == -1) {
+    // It's okay if it already exists, expected even.
+    if (errno != EEXIST) {
+      fprintf(stderr, "Error creating log directory\n");
+      abort();
+    }
+  }
+  // Okay, directory exists.
+  // Make an attempt at giving it permissive perms
+  if (chmod(log_dir, 0777) == -1)
+    fprintf(stderr, "Error setting logdir permissions, continuing...\n");
+
+  sprintf(buf, "%s/%d.log", log_dir, newmypid);
 
   int logfd = open(buf, O_CLOEXEC | O_WRONLY | O_APPEND | O_CREAT, 0666);
   if (logfd == -1) {
