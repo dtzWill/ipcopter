@@ -59,7 +59,7 @@ int get_shm(int flags, mode_t mode) {
 
 void shm_state_save() {
   // Create shared memory segment
-  int fd = get_shm(O_RDWR | O_CREAT | O_EXCL, 0777);
+  int fd = get_shm(O_RDWR | O_CREAT | O_EXCL, 0400);
   UC(fd, "get_shm");
 
   bool success = rename_fd(fd, MAGIC_SHM_FD, /* cloexec */ false);
@@ -83,9 +83,15 @@ void shm_state_save() {
   // Copy state to shared memory segment
   *(libipc_state*)stateptr = state;
 
-  // Unmap, but don't unlink the shared memory
+  // Unmap memory, we're done with it
   ret = munmap(stateptr, sizeof(libipc_state));
   UC(ret, "unmap shm");
+
+  // Issue request to unlink the memory,
+  // but this won't occur until our fd is closed.
+  // (which we leave open intentionally)
+  ret = shm_unlink(getShmName());
+  UC(ret, "eager shm_unlink");
 
   ipclog("State saved!\n");
 }
@@ -116,8 +122,6 @@ void shm_state_restore() {
   // Done with the shared segment, thank you!
   ret = __real_close(MAGIC_SHM_FD);
   UC(ret, "close shm");
-  ret = shm_unlink(getShmName());
-  UC(ret, "shm_unlink after close");
 
   ipclog("State restored!\n");
 }
@@ -128,9 +132,6 @@ void shm_state_destroy() {
 
   int ret = __real_close(MAGIC_SHM_FD);
   assert(ret == 0);
-
-  ret = shm_unlink(getShmName());
-  UC(ret, "shm_unlink");
 
   ipclog("Destroyed saved state!\n");
 }
