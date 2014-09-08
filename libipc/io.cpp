@@ -38,7 +38,11 @@ void copy_bufsize(int src, int dst, int buftype) {
   socklen_t sz = sizeof(bufsize);
   int ret = getsockopt(src, SOL_SOCKET, buftype, &bufsize, &sz);
   assert(!ret);
-  // ipclog("Bufsize %d of fd %d: %d\n", buftype, src, bufsize);
+
+  // getsockopt returns doubled value of buffer,
+  // which should be used in setsockopt().
+  bufsize/=2;
+
   ret = setsockopt(dst, SOL_SOCKET, buftype, &bufsize, sz);
   assert(!ret);
 }
