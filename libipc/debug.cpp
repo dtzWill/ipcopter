@@ -66,8 +66,10 @@ FILE *getlogfp() {
   }
   // Okay, directory exists.
   // Make an attempt at giving it permissive perms
-  if (chmod(log_dir, 0777) == -1)
-    fprintf(stderr, "Error setting logdir permissions, continuing...\n");
+  // Ignore return value for now...
+  (void)chmod(log_dir, 0777);
+  //if (chmod(log_dir, 0777) == -1)
+  //  fprintf(stderr, "Error setting logdir permissions, continuing...\n");
 
   sprintf(buf, "%s/%d.log", log_dir, newmypid);
 
