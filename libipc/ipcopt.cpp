@@ -232,16 +232,13 @@ char is_protected_fd(int fd) {
 }
 
 void register_inherited_fds() {
-  // We just forked, bump ref count
-  // on the fd's we inherited.
-  for (unsigned fd = 0; fd < TABLE_SIZE; ++fd) {
-    if (is_registered_socket(fd)) {
-      endpoint ep = getEP(fd);
-      assert(ep != EP_INVALID);
-      bool ret = ipcd_reregister_socket(ep, fd);
+  for (unsigned ep = 0; ep < TABLE_SIZE; ++ep) {
+    ipc_info &i = getInfo(ep);
+    if (i.state != STATE_INVALID) {
+      assert(i.ref_count > 0);
+      bool ret = ipcd_reregister_socket(ep, 0 /* XXX */);
       if (!ret) {
-        ipclog("Failed to reregister endpoint '%d' for inherited fd '%d'\n",
-               ep, fd);
+        ipclog("Failed to reregister endpoint '%d'\n", ep);
       }
     }
   }
