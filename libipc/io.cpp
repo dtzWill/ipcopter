@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-const size_t TRANS_THRESHOLD = 1ULL << 18;
+const size_t TRANS_THRESHOLD = 1ULL << 16;
 const size_t MAX_SYNC_ATTEMPTS = 20;
 const size_t MILLIS_IN_MICROSECONDS = 1000;
 const size_t IPCD_SYNC_DELAY = 100 * MILLIS_IN_MICROSECONDS;
