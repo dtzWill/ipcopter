@@ -145,10 +145,12 @@ void attempt_optimization(int fd, bool send) {
     // TODO: Async!
     endpoint remote = EP_INVALID;
     size_t attempts = 0;
-    ipclog("CRC's: %x, %x\n", i.crc_sent.checksum(), i.crc_recv.checksum());
+    uint32_t crc_sent = i.crc_sent.checksum();
+    uint32_t crc_recv = i.crc_recv.checksum();
+    ipclog("CRC's: %x, %x\n", crc_sent, crc_recv);
     while (true) {
       remote =
-          ipcd_crc_kludge(ep, i.crc_sent.checksum(), i.crc_recv.checksum());
+          ipcd_crc_kludge(ep, crc_sent, crc_recv);
       if (remote != EP_INVALID)
         break;
       ++attempts;
