@@ -70,17 +70,16 @@ fd_set *copy_if_needed(fd_set *src, fd_set *copy, int &nfds) {
   // More intrusive implementation would be much more efficient!
 
   int maxfd = std::min<int>(FD_SETSIZE, TABLE_SIZE);
+  maxfd = std::min<int>(maxfd, nfds);
 
   // NULL sets are easy :)
   if (src == NULL)
     return src;
 
   bool need_copy = false;
-  int fds_found = 0;
-  for (int fd = 0; fd < maxfd && fds_found < nfds; ++fd) {
+  for (int fd = 0; fd < maxfd; ++fd) {
     if (!FD_ISSET(fd, src))
       continue;
-    ++fds_found;
     if (!is_optimized_socket_safe(fd))
       continue;
 
@@ -94,12 +93,10 @@ fd_set *copy_if_needed(fd_set *src, fd_set *copy, int &nfds) {
 
   // Make second pass, copying into 'copy'
   // either original fd or the localfd for optimized connections.
-  fds_found = 0;
   int orig_nfds = nfds;
-  for (int fd = 0; fd < maxfd && fds_found < nfds; ++fd) {
+  for (int fd = 0; fd < maxfd; ++fd) {
     if (!FD_ISSET(fd, src))
       continue;
-    ++fds_found;
     if (!is_optimized_socket_safe(fd)) {
       assert(!FD_ISSET(fd, copy));
       FD_SET(fd, copy);
@@ -127,15 +124,14 @@ void select__copy_to_output(fd_set *out, fd_set*givenout, int nfds) {
     return;
 
   int maxfd = std::min<int>(FD_SETSIZE, TABLE_SIZE);
+  maxfd = std::min<int>(maxfd, nfds);
 
   // For each fd set in 'givenout', check if
   // it or its optimized local version were set
   // by select in the given 'out' set.
-  int fds_found = 0;
-  for (int fd = 0; fd < maxfd && fds_found < nfds; ++fd) {
+  for (int fd = 0; fd < maxfd; ++fd) {
     if (!FD_ISSET(fd, givenout))
       continue;
-    ++fds_found;
     int equiv_fd = fd;
     if (is_optimized_socket_safe(fd))
       equiv_fd = getInfo(getEP(fd)).localfd;
