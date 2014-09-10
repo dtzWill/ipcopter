@@ -380,12 +380,14 @@ endpoint ipcd_endpoint_kludge(endpoint local) {
   return EP_INVALID;
 }
 
-endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc) {
+endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc,
+                         bool last) {
   ScopedLock L(getConnectLock());
   connect_if_needed();
 
   char buf[100];
-  int len = sprintf(buf, "THRESH_CRC_KLUDGE %d %d %d\n", local, s_crc, r_crc);
+  int len = sprintf(buf, "THRESH_CRC_KLUDGE %d %d %d %d\n", local, s_crc, r_crc,
+                    last ? 1 : 0);
   assert(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {

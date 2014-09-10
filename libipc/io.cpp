@@ -149,12 +149,12 @@ void attempt_optimization(int fd, bool send) {
     uint32_t crc_recv = i.crc_recv.checksum();
     ipclog("CRC's: %x, %x\n", crc_sent, crc_recv);
     while (true) {
+      bool last = (++attempts >= MAX_SYNC_ATTEMPTS + 3);
       remote =
-          ipcd_crc_kludge(ep, crc_sent, crc_recv);
+          ipcd_crc_kludge(ep, crc_sent, crc_recv, last);
       if (remote != EP_INVALID)
         break;
-      ++attempts;
-      if (attempts >= MAX_SYNC_ATTEMPTS + 3)
+      if (last)
         break;
       if (attempts > 3) {
         sched_yield();

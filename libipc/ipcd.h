@@ -45,7 +45,8 @@ bool ipcd_reregister_socket(endpoint ep, int fd);
 endpoint ipcd_endpoint_kludge(endpoint local);
 
 // THRESH_CRC_KLUDGE
-endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc);
+endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc,
+                         bool last);
 
 // Does ipcd need the specified fd?
 bool ipcd_is_protected(int fd);
