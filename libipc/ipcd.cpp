@@ -44,6 +44,17 @@ SimpleLock &getConnectLock() {
   return ConnectLock;
 }
 
+#define ASSERT_WITH_LOCK(expr)                                                 \
+  ((expr) ? __ASSERT_VOID_CAST(0)                                              \
+          : unlock_and_assert_fail(__STRING(expr), __FILE__, __LINE__,         \
+                                   __ASSERT_FUNCTION))
+
+void unlock_and_assert_fail(const char *assertion, const char *file,
+                              unsigned int line, const char *function) {
+  getConnectLock().Unlock();
+  __assert_fail(assertion, file, line, function);
+}
+
 bool we_are_ipcd;
 
 void check_if_we_are_ipcd() {
@@ -220,24 +231,24 @@ endpoint ipcd_register_socket(int fd) {
 
   char buf[100];
   int len = sprintf(buf, "REGISTER %d %d\n", getpid(), fd);
-  assert(len > 5);
+  ASSERT_WITH_LOCK(len > 5);
 
-  assert(ipcd_socket);
+  ASSERT_WITH_LOCK(ipcd_socket);
   // ipclog("REGISTER %d -->\n", fd);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
-    exit(1);
+    ASSERT_WITH_LOCK(0);
   }
 
   // ipclog("REGISTER %d <--\n", fd);
   err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
-  assert(err > 5);
+  ASSERT_WITH_LOCK(err > 5);
 
   buf[err] = 0;
   int id;
   int n = sscanf(buf, "200 ID %d\n", &id);
-  assert(n == 1);
+  ASSERT_WITH_LOCK(n == 1);
 
   // ipclog("Registered and got endpoint id=%d\n", id);
 
@@ -250,14 +261,14 @@ bool ipcd_localize(endpoint local, endpoint remote) {
 
   char buf[100];
   int len = sprintf(buf, "LOCALIZE %d %d\n", local, remote);
-  assert(len > 5);
+  ASSERT_WITH_LOCK(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
-    exit(1);
+    ASSERT_WITH_LOCK(0);
   }
   err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
-  assert(err > 5);
+  ASSERT_WITH_LOCK(err > 5);
 
   return strncmp(buf, "200 OK\n", err) == 0;
 }
@@ -269,11 +280,11 @@ int ipcd_getlocalfd(endpoint local) {
 
   char buf[100];
   int len = sprintf(buf, "GETLOCALFD %d\n", local);
-  assert(len > 5);
+  ASSERT_WITH_LOCK(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
-    exit(1);
+    ASSERT_WITH_LOCK(0);
   }
 
   int fd;
@@ -298,7 +309,7 @@ int ipcd_getlocalfd(endpoint local) {
     int ret = __real_recvmsg(ipcd_socket, &msg, MSG_NOSIGNAL);
     if (ret <= 0) {
       perror("recvmsg");
-      exit(1);
+      ASSERT_WITH_LOCK(0);
     }
 
     // TODO: Understand and fix mismatch between
@@ -308,10 +319,10 @@ int ipcd_getlocalfd(endpoint local) {
   }
 
   err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
-  assert(err > 5);
+  ASSERT_WITH_LOCK(err > 5);
 
   bool success = strncmp(buf, "200 OK\n", err) == 0;
-  assert(success);
+  ASSERT_WITH_LOCK(success);
 
   return fd;
 }
@@ -323,14 +334,14 @@ bool ipcd_unregister_socket(endpoint ep) {
 
   char buf[100];
   int len = sprintf(buf, "UNREGISTER %d\n", ep);
-  assert(len > 5);
+  ASSERT_WITH_LOCK(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
-    exit(1);
+    ASSERT_WITH_LOCK(0);
   }
   err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
-  assert(err > 5);
+  ASSERT_WITH_LOCK(err > 5);
 
   return strncmp(buf, "200 OK\n", err) == 0;
 }
@@ -342,14 +353,14 @@ bool ipcd_reregister_socket(endpoint ep, int fd) {
 
   char buf[100];
   int len = sprintf(buf, "REREGISTER %d %d %d\n", ep, getpid(), fd);
-  assert(len > 5);
+  ASSERT_WITH_LOCK(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
-    exit(1);
+    ASSERT_WITH_LOCK(0);
   }
   err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
-  assert(err > 5);
+  ASSERT_WITH_LOCK(err > 5);
 
   return strncmp(buf, "200 OK\n", err) == 0;
 }
@@ -360,14 +371,14 @@ endpoint ipcd_endpoint_kludge(endpoint local) {
 
   char buf[100];
   int len = sprintf(buf, "ENDPOINT_KLUDGE %d\n", local);
-  assert(len > 5);
+  ASSERT_WITH_LOCK(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
-    exit(1);
+    ASSERT_WITH_LOCK(0);
   }
   err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
-  assert(err > 5);
+  ASSERT_WITH_LOCK(err > 5);
 
   buf[err] = 0;
   int id;
@@ -388,14 +399,14 @@ endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc,
   char buf[100];
   int len = sprintf(buf, "THRESH_CRC_KLUDGE %d %d %d %d\n", local, s_crc, r_crc,
                     last ? 1 : 0);
-  assert(len > 5);
+  ASSERT_WITH_LOCK(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
     perror("write");
-    exit(1);
+    ASSERT_WITH_LOCK(0);
   }
   err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
-  assert(err > 5);
+  ASSERT_WITH_LOCK(err > 5);
 
   buf[err] = 0;
   int id;
