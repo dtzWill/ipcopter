@@ -198,6 +198,10 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 			RErr = UnknownErr(err.Error())
 			return
 		}
+		// close our copy of it.
+		// This seems to work, but I can't find
+		// documentation that it's safe to close it at this point.
+		FD.Close()
 	case "UNREGISTER":
 		// UNREGISTER <endpoint>
 		EP, err := strconv.Atoi(spaceDelimTokens[1])
