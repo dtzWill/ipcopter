@@ -258,7 +258,7 @@ func (C *IPCContext) reregister(ID, PID, FD int) error {
 	return nil
 }
 
-func (C *IPCContext) crc_match(ID, S_CRC, R_CRC int) (int, error) {
+func (C *IPCContext) crc_match(ID, S_CRC, R_CRC int, LastTry bool) (int, error) {
 	C.Lock.Lock()
 	defer C.Lock.Unlock()
 
@@ -297,6 +297,13 @@ func (C *IPCContext) crc_match(ID, S_CRC, R_CRC int) (int, error) {
 	}
 	// NOPAIR
 	if MatchID == -1 {
+		// If this is the last time the program
+		// will attempt to find its communication pair,
+		// remove the CRC information to prevent pairing.
+		if LastTry {
+			EPI.S_CRC = 0
+			EPI.R_CRC = 0
+		}
 		return ID, nil
 	}
 

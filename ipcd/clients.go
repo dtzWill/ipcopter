@@ -239,8 +239,8 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 		}
 		return fmt.Sprintf("PAIR %d", Pair), nil
 	case "THRESH_CRC_KLUDGE":
-		// THRESH_CRC_KLUDGE <endpoint id> <send_crc> <recv_crc>
-		if len(spaceDelimTokens) < 4 {
+		// THRESH_CRC_KLUDGE <endpoint id> <send_crc> <recv_crc> <done>
+		if len(spaceDelimTokens) < 5 {
 			RErr = InsufficientArgsErr()
 			return
 		}
@@ -259,8 +259,13 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 			RErr = InvalidParameterErr(err.Error())
 			return
 		}
+		LastTry, err := strconv.Atoi(spaceDelimTokens[4])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
 
-		Pair, err := Ctxt.crc_match(EP, S_CRC, R_CRC)
+		Pair, err := Ctxt.crc_match(EP, S_CRC, R_CRC, LastTry != 0)
 		if err != nil {
 			RErr = UnknownErr(err.Error())
 			return
