@@ -36,14 +36,14 @@ const size_t ATTEMPT_SLEEP_INTERVAL = IPCD_SYNC_DELAY / MAX_SYNC_ATTEMPTS;
 void copy_bufsize(int src, int dst, int buftype) {
   int bufsize;
   socklen_t sz = sizeof(bufsize);
-  int ret = getsockopt(src, SOL_SOCKET, buftype, &bufsize, &sz);
+  int ret = __real_getsockopt(src, SOL_SOCKET, buftype, &bufsize, &sz);
   assert(!ret);
 
   // getsockopt returns doubled value of buffer,
   // which should be used in setsockopt().
   bufsize/=2;
 
-  ret = setsockopt(dst, SOL_SOCKET, buftype, &bufsize, sz);
+  ret = __real_setsockopt(dst, SOL_SOCKET, buftype, &bufsize, sz);
   assert(!ret);
 }
 void copy_bufsizes(int src, int dst) {
