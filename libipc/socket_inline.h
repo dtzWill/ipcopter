@@ -43,6 +43,17 @@ static inline int __internal_socket(int domain, int type, int protocol) {
 
   bool ip_domain = (domain == AF_INET) || (domain == AF_INET6);
   bool stream_sock = (type & SOCK_STREAM) != 0;
+  // XXX: One idea, given in the FastSockets paper, is to
+  // only do transport selection/optimization if the 'protocol'
+  // given is '0' ('default').  The idea is this provides
+  // a natural way for applications to explicitly use
+  // TCP and only TCP if that's what they actually want.
+  //
+  // I'd say this is only a good idea if applications that
+  // don't really need TCP are good about not overspecifying
+  // the protocol to be used when creating sockets.
+  // Since I don't have any data on this presently,
+  // we handle/optimize both equally for now.
   bool tcp_proto = (protocol == 0) || (protocol == IPPROTO_TCP);
   bool tcp = ip_domain && stream_sock && tcp_proto;
   bool valid_fd = (fd != -1);
