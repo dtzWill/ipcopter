@@ -43,7 +43,8 @@ static inline int __internal_socket(int domain, int type, int protocol) {
 
   bool ip_domain = (domain == AF_INET) || (domain == AF_INET6);
   bool stream_sock = (type & SOCK_STREAM) != 0;
-  bool tcp = ip_domain && stream_sock;
+  bool tcp_proto = (protocol == 0) || (protocol == IPPROTO_TCP);
+  bool tcp = ip_domain && stream_sock && tcp_proto;
   bool valid_fd = (fd != -1);
   if (tcp && valid_fd) {
     register_inet_socket(fd);
