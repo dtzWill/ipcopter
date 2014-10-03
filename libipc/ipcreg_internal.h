@@ -22,8 +22,15 @@
 
 #include <boost/crc.hpp>
 
-const unsigned TABLE_SIZE = 1 << 11;
-const unsigned MAX_EPOLL_ENTRIES = 50;
+const unsigned TABLE_SIZE = 1 << 10;
+// EPOLL size here is conservative to avoid
+// bloating our table.  This might break some
+// epoll programs, but the fix isn't bumping
+// this back up but rather to store epoll
+// information elsewhere--statically allocating
+// maximum possible memory requirements is silly
+// and is causing us problems.
+const unsigned MAX_EPOLL_ENTRIES = 5;
 
 enum EndpointState {
   STATE_INVALID = 0,
