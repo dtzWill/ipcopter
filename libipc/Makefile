@@ -16,6 +16,7 @@ OPTFLAGS := -O4 -flto
 WARNFLAGS := -Wall -Wextra -Werror
 EXTRAFLAGS := -fPIC -fno-strict-aliasing
 EXTRAFLAGS += -fno-rtti -fno-exceptions
+EXTRAFLAGS += -fvisibility=hidden
 SHARED_FLAGS := $(OPTFLAGS) $(WARNFLAGS) $(EXTRAFLAGS)
 CFLAGS := $(SHARED_FLAGS)
 CXXFLAGS := $(SHARED_FLAGS) #-std=gnu++11

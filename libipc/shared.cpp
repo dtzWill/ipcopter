@@ -20,6 +20,8 @@
 #include <poll.h>
 #include <stdarg.h>
 
+#pragma GCC visibility push(default)
+
 BEGIN_EXTERN_C
 
 #define RESTRICT
@@ -209,6 +211,10 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
   return __internal_epoll_ctl(epfd, op, fd, event);
 }
 
+END_EXTERN_C
+
+#pragma GCC visibility pop
+
 //===- Access to libc-backed versions -------------------------------------===//
 
 // Data
@@ -324,4 +330,3 @@ int __real_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
   CALL_REAL(epoll_ctl, epfd, op, fd, event);
 }
 
-END_EXTERN_C
