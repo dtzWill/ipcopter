@@ -7,9 +7,11 @@ ARFLAGS=rcs
 STATIC_LIB := libipc.a
 DYNAMIC_LIB := libipc.so
 
-SHARED_LDFLAGS = -shared $(WRAP_FLAGS) -ldl -lrt
+SHARED_LDFLAGS = -shared $(WRAP_FLAGS) -ldl -flto
+SHARED_LDFLAGS += -static-libstdc++
+SHARED_LDFLAGS += -static-libgcc
 
-OPTFLAGS := -O3
+OPTFLAGS := -O4 -flto
 WARNFLAGS := -Wall -Wextra -Werror
 EXTRAFLAGS := -fPIC -fno-strict-aliasing
 SHARED_FLAGS := $(OPTFLAGS) $(WARNFLAGS) $(EXTRAFLAGS)
