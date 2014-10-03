@@ -207,10 +207,12 @@ int getlocalfd(int fd) {
 
 char is_protected_fd(int fd) {
   // Logging fd is protected
+#if USE_DEBUG_LOGGER
   if (FILE *logfp = getlogfp())
     if (int logfd = fileno(logfp))
       if (logfd == fd)
         return true;
+#endif
 
   if (!ipcd_enabled())
     return false;

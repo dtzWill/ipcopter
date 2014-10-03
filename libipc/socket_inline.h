@@ -208,6 +208,7 @@ static inline void __internal_closefrom(int lowfd) {
 }
 
 static inline int __internal_shutdown(int sockfd, int how) {
+#if USE_DEBUG_LOGGER
   if (FILE *logfp = getlogfp()) {
     if (int logfd = fileno(logfp)) {
       if (logfd == sockfd) {
@@ -216,6 +217,7 @@ static inline int __internal_shutdown(int sockfd, int how) {
       }
     }
   }
+#endif
 
   // TODO: Hmm, what should be done here?
 
