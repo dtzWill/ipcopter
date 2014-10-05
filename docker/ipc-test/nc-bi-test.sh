@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 PORTS=`seq 3000 3010`
 

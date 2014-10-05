@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Create base ipc-hook container
 . ./build.sh
