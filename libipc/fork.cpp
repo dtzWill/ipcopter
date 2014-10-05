@@ -37,7 +37,9 @@ pid_t __internal_fork(void) {
     break;
   case 0:
     // child
+#if USE_DEBUG_LOGGER
     ipclog("FORK! Parent is: %d\n", getppid());
+#endif
     break;
   default:
     // parent
