@@ -1,0 +1,8 @@
+FROM      {{USER}}/ipc-memcached
+MAINTAINER Will Dietz <w@wdtz.org>
+
+EXPOSE 11211
+
+# invocation used by native rahman host, minus -l 127.0.0.1
+CMD /usr/bin/memcached -m 2048 -p 11211 -u memcache
+

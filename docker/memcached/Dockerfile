@@ -27,11 +27,8 @@ RUN sed -i 's@HAVE_MEMCACHED_PROTOCOL_BINARY_H@__NOT_DEF__@' memcachetest/libmem
 # Build benchmark
 RUN cd memcachetest && config/autorun.sh && ./configure && make
 
-
-# # clone the benchmark repo
-# RUN git clone https://github.com/antirez/mc-benchmark
-# # Build it!
-# RUN cd mc-benchmark && make
+# Add test script from ipcopter-scripts
+ADD run.sh /
 
 
 # Inject latest versions of the library and daemon:

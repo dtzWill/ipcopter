@@ -5,9 +5,9 @@
 TEST_CMD="
 service memcached start
 sleep 1
-cd memcachetest
-./memcachetest -h 127.0.0.1 -t 30 -W 20 -P 33 -i 10000 -c 200000 -l -T 10
+WORKLOAD=basic ./run.sh
 service memcached stop
+cat results/results.csv
 sleep 1"
 
 . ../test.inc
