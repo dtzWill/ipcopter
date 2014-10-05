@@ -22,7 +22,7 @@ cp $LIBIPC_DIR/libipc.so $BIN_DIR/
 
 cd $IPCD_DIR
 # go clean
-go build
+go build -compiler gc
 go test
 
 rsync -c $IPCD_DIR/ipcd $BIN_DIR/
