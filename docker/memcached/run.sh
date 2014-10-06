@@ -12,9 +12,9 @@ test)
   PROBS="50"
   ;;
 basic)
-  THREADS="1 2 4"
-  TIME=10
-  PROBS="0 50 100"
+  THREADS="1 2 4 8 10 12 14 16"
+  TIME=60
+  PROBS="50"
   ;;
 full)
   THREADS="$(seq 1 $(nproc)0)"
