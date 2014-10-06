@@ -30,7 +30,7 @@ const unsigned TABLE_SIZE = 1 << 10;
 // information elsewhere--statically allocating
 // maximum possible memory requirements is silly
 // and is causing us problems.
-const unsigned MAX_EPOLL_ENTRIES = 5;
+const unsigned MAX_EPOLL_ENTRIES = 10;
 
 enum EndpointState {
   STATE_INVALID = 0,
