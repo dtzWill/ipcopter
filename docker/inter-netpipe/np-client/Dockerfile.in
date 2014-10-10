@@ -1,0 +1,8 @@
+FROM      {{USER}}/netpipe
+MAINTAINER Will Dietz <w@wdtz.org>
+
+ADD client.sh /
+
+CMD WORKLOAD=full /client.sh && cat /results/results.csv
+
+

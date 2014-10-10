@@ -1,0 +1,19 @@
+# netpipe container, needed for patched version >.<
+FROM      {{USER}}/ipc-hook
+MAINTAINER Will Dietz <w@wdtz.org>
+
+# Disable IPCD while building/adding netpipe,
+# probably doesn't matter but let's avoid issues.
+RUN mv /etc/ld.so.preload /tmp/ld.so.preload
+
+# Insert netpipe sources, build
+# XXX: Apparently docker auto-extracts the tarball?!
+ADD NetPIPE-3.7.1.tar.gz /
+ADD fix_port_flag.patch /
+
+WORKDIR NetPIPE-3.7.1
+RUN patch -p1 -i ../fix_port_flag.patch
+RUN make -j
+
+# Restore preload file
+RUN mv /tmp/ld.so.preload /etc/ld.so.preload
