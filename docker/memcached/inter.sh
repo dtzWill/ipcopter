@@ -39,7 +39,7 @@ DISABLE_CMD="$DISABLE_CMD && rm -rf /tmp/ipcd*"
 for t in {server,client}; do
   mkdir -p tmp
   echo "RUN $DISABLE_CMD" | cat $t/Dockerfile - > tmp/Dockerfile
-  docker build -q -t $USER/$t-clean tmp
+  docker build -q -t $USER/mem-$t-clean tmp
 done
 rm -rf ./tmp
 
