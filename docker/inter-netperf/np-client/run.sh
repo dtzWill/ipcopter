@@ -19,7 +19,7 @@ basic)
   ;;
 full)
   SIZES="$(python -c "print ' '.join(map(lambda x:str(2**x),range(21)))")"
-  ITERS="3,30"
+  ITERS="30,3"
   TIME=10
   ;;
 *)
