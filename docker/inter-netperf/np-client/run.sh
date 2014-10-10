@@ -33,7 +33,7 @@ mkdir -p $RESULTS
 
 for size in $SIZES; do
   LOG=$RESULTS/${size}.log
-  stdbuf -oL -eL netperf -t TCP_STREAM -l $TIME -fM -I $CONFID -i $ITERS -H server -- -m $size |& tee $LOG
+  stdbuf -oL -eL netperf -t TCP_STREAM -l $TIME -fM -I $CONFID -i $ITERS -H server -p 3000 -- -m $size |& tee $LOG
 done
 
 RESULT_CSV=$RESULTS/results.csv

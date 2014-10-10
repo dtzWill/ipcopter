@@ -1,6 +1,8 @@
 FROM      {{USER}}/ipc-hook
 MAINTAINER Will Dietz <w@wdtz.org>
 
+ADD run.sh /
+
 CMD WORKLOAD=basic ./run.sh && cat results/results.csv
 
 

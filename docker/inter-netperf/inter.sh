@@ -46,7 +46,7 @@ update "Starting client container linked to server, also with ipcd socket mounte
 docker run -d --name np-client --volumes-from ipcd --link np-server:server $USER/np-client > /dev/null
 
 status "Monitor experiment (ipcd enabled)"
-docker attach np-server
+docker attach np-client
 update "Transfer complete."
 
 status "IPCD experiment cleanup, please be patient..."
@@ -69,7 +69,7 @@ update "Starting client container linked to server..."
 docker run -d --name np-client --link np-server:server $USER/np-client > /dev/null
 
 status "Monitor experiment (ipcd *NOT* enabled)"
-docker attach np-server
+docker attach np-client
 update "Transfer complete."
 
 status "Cleanup! Please be patient..."
