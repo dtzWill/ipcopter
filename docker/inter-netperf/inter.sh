@@ -32,6 +32,14 @@ update "Generating server container..."
 docker build -q -t $USER/np-server np-server > /dev/null
 update "Generating client container..."
 docker build -q -t $USER/np-client np-client > /dev/null
+update "Generating versions without any of our tech..."
+DISABLE_CMD="rm /etc/ld.so.preload /bin/ipcd /lib/libipc.so"
+DISABLE_CMD="$DISABLE_CMD && rm -rf /tmp/ipcd*"
+for t in {server,client}; do
+  mkdir -p tmp
+  echo "RUN $DISABLE_CMD" | cat np-$t/Dockerfile - > tmp/Dockerfile
+  docker build -q -t $USER/np-$t-clean tmp
+done
 
 status "Starting containers for IPCD experiment"
 
@@ -63,23 +71,23 @@ docker rm ipcd > /dev/null
 
 status "Starting containers for non-IPCD experiment:"
 update "Starting server container..."
-docker run -d --name np-server $USER/np-server > /dev/null
+docker run -d --name np-server-clean $USER/np-server-clean > /dev/null
 sleep 1
 update "Starting client container linked to server..."
-docker run -d --name np-client --link np-server:server $USER/np-client > /dev/null
+docker run -d --name np-client-clean --link np-server-clean:server $USER/np-client-clean > /dev/null
 
 status "Monitor experiment (ipcd *NOT* enabled)"
-docker attach np-client
+docker attach np-client-clean
 update "Transfer complete."
 
 status "Cleanup! Please be patient..."
 update "Waiting for cient to ensure it's done:"
-docker wait np-client >/dev/null
+docker wait np-client-clean >/dev/null
 
 update "Stopping server and client containers..."
-docker stop -t=1 np-server np-client > /dev/null
+docker stop -t=1 np-server-clean np-client-clean > /dev/null
 update "And removing their disk images..."
-docker rm np-server np-client > /dev/null
+docker rm np-server-clean np-client-clean > /dev/null
 
 echo
 status "** Done! ** "
