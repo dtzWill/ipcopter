@@ -128,16 +128,18 @@ void attempt_optimization(int fd, bool send) {
     // TODO: Async!
     endpoint remote = EP_INVALID;
     size_t attempts = 0;
-    uint32_t crc_sent = i.crc_sent.checksum();
-    uint32_t crc_recv = i.crc_recv.checksum();
-    netaddr src, dst;
-    get_netaddr(fd, src, true);
-    get_netaddr(fd, dst, false);
-    ipclog("CRC's: %x, %x; Src=%s:%d, Dst=%s:%d\n", crc_sent, crc_recv, src.addr, src.port, dst.addr, dst.port);
+
+    pairing_info pi;
+    get_netaddr(fd, pi.src, true);
+    get_netaddr(fd, pi.dst, false);
+
+    pi.s_crc = i.crc_sent.checksum();
+    pi.r_crc = i.crc_recv.checksum();
+
     while (true) {
       bool last = (++attempts >= MAX_SYNC_ATTEMPTS + 3);
       remote =
-          ipcd_find_pair(ep, src, dst, crc_sent, crc_recv, last);
+          ipcd_find_pair(ep, pi, last);
       if (remote != EP_INVALID)
         break;
       if (last)

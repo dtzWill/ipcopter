@@ -26,6 +26,14 @@ typedef struct {
   int port;
 } netaddr;
 
+typedef struct {
+  netaddr src;
+  netaddr dst;
+  uint32_t s_crc;
+  uint32_t r_crc;
+  // TODO: Timing info
+} pairing_info;
+
 // Initialize connection
 void __ipcd_init();
 
@@ -55,8 +63,7 @@ endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc,
                          bool last);
 
 // FIND_PAIR
-endpoint ipcd_find_pair(endpoint local, netaddr &src, netaddr &dst,
-                        uint32_t s_crc, uint32_t r_crc, bool last);
+endpoint ipcd_find_pair(endpoint local, pairing_info &pi, bool last);
 
 // Does ipcd need the specified fd?
 bool ipcd_is_protected(int fd);
