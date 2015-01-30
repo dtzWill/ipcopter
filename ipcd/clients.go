@@ -278,6 +278,54 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 			return "NOPAIR", nil
 		}
 		return fmt.Sprintf("PAIR %d", Pair), nil
+	case "FIND_PAIR":
+		// FIND_PAIR <endpoint id> <srcip> <srcport> <dstip> <dstport> <send_crc> <recv_crc> <done>
+		if len(spaceDelimTokens) < 9 {
+			RErr = InsufficientArgsErr()
+			return
+		}
+		EP, err := strconv.Atoi(spaceDelimTokens[1])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		SIP := spaceDelimTokens[2]
+		SPort, err := strconv.Atoi(spaceDelimTokens[3])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+		}
+		DIP := spaceDelimTokens[4]
+		DPort, err := strconv.Atoi(spaceDelimTokens[5])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+		}
+		S_CRC, err := strconv.Atoi(spaceDelimTokens[6])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		R_CRC, err := strconv.Atoi(spaceDelimTokens[7])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		LastTry, err := strconv.Atoi(spaceDelimTokens[8])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+
+		Src := NetAddr{SIP, SPort}
+		Dst := NetAddr{DIP, DPort}
+		Pair, err := Ctxt.find_pair(EP, Src, Dst, S_CRC, R_CRC, LastTry != 0)
+		if err != nil {
+			RErr = UnknownErr(err.Error())
+			return
+		}
+		if Pair == EP {
+			return "NOPAIR", nil
+		}
+		return fmt.Sprintf("PAIR %d", Pair), nil
 	case "REREGISTER":
 		// REREGISTER EP PID FD
 		// TODO: Actually do something with PID/FD.

@@ -23,12 +23,19 @@ type EndPoint struct {
 	FD  int
 }
 
+type NetAddr struct {
+	IP   string
+	Port int
+}
+
 type EndPointInfo struct {
 	EP         EndPoint
 	Info       *LocalInfo
 	KludgePair *EndPointInfo
 	S_CRC      int
 	R_CRC      int
+	Src        NetAddr
+	Dst        NetAddr
 	RefCount   int
 	ID         int
 }
@@ -40,6 +47,14 @@ type IPCContext struct {
 	// Used for Endpoint sync kludge
 	WaitingEPI  *EndPointInfo
 	WaitingTime time.Time
+}
+
+func InvalidAddr() NetAddr {
+	return NetAddr{"", -1}
+}
+
+func (N *NetAddr) isValid() bool {
+	return N.Port != -1
 }
 
 func NewContext() *IPCContext {
@@ -54,7 +69,7 @@ func (C *IPCContext) register(PID, FD int) (int, error) {
 
 	ID := C.FreeID
 
-	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 0 /* S_CRC */, 0 /* R_CRC */, 1 /* refcnt */, ID}
+	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 0 /* S_CRC */, 0 /* R_CRC */, InvalidAddr() /* Src */, InvalidAddr() /* Dst*/, 1 /* refcnt */, ID}
 
 	C.EPMap[ID] = &EPI
 
@@ -303,6 +318,72 @@ func (C *IPCContext) crc_match(ID, S_CRC, R_CRC int, LastTry bool) (int, error) 
 		if LastTry {
 			EPI.S_CRC = 0
 			EPI.R_CRC = 0
+		}
+		return ID, nil
+	}
+
+	Match := C.EPMap[MatchID]
+	EPI.KludgePair = Match
+	Match.KludgePair = EPI
+
+	return MatchID, nil
+}
+
+func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, LastTry bool) (int, error) {
+	C.Lock.Lock()
+	defer C.Lock.Unlock()
+
+	EPI, exist := C.EPMap[ID]
+	if !exist {
+		return ID, errors.New(fmt.Sprintf("Invalid Endpoint ID '%d'", ID))
+	}
+
+	// If already kludge-paired this, return its kludge-pal
+	if EPI.KludgePair != nil {
+		return EPI.KludgePair.ID, nil
+	}
+
+	// TODO: Zero is a valid CRC value!
+	if EPI.S_CRC != 0 || EPI.R_CRC != 0 {
+		if EPI.S_CRC != S_CRC && EPI.R_CRC != R_CRC {
+			return ID, errors.New("pairing attempted with changed CRC values")
+		}
+	}
+	if EPI.Src.isValid() || EPI.Dst.isValid() {
+		if EPI.Src != Src || EPI.Dst != Dst {
+			return ID, errors.New("pairing attempted with changed address")
+		}
+	}
+
+	EPI.S_CRC = S_CRC
+	EPI.R_CRC = R_CRC
+	EPI.Src = Src
+	EPI.Dst = Dst
+
+	MatchID := -1
+	for k, v := range C.EPMap {
+		if k == ID {
+			continue
+		}
+		if v.KludgePair != nil {
+			continue
+		}
+		if v.S_CRC == R_CRC && v.R_CRC == S_CRC &&
+			v.Src == Dst && v.Dst == Src {
+			MatchID = k
+			break
+		}
+	}
+	// NOPAIR
+	if MatchID == -1 {
+		// If this is the last time the program
+		// will attempt to find its communication pair,
+		// remove the CRC information to prevent pairing.
+		if LastTry {
+			EPI.S_CRC = 0
+			EPI.R_CRC = 0
+			EPI.Src = InvalidAddr()
+			EPI.Dst = InvalidAddr()
 		}
 		return ID, nil
 	}
