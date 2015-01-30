@@ -12,7 +12,7 @@ test)
   PROBS="50"
   ;;
 basic)
-  THREADS="1 2 4 8 10 12 14 16"
+  THREADS="1 2 4 6 8 10 12 14 16"
   TIME=60
   PROBS="50"
   ;;
