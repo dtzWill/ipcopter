@@ -64,12 +64,10 @@ char get_threshold_indicator_char(ipc_info &i, bool send) {
   return '=';
 }
 
-void add_sockaddr_to_checksum(int fd, bool local, boost::crc_32_type &crc) {
+void get_netaddr(int fd, netaddr &na, bool local) {
   struct sockaddr_storage addr;
   socklen_t len = sizeof(addr);
-  int port;
   int ret;
-  char ipstr[INET6_ADDRSTRLEN];
   if (local)
     ret = getsockname(fd, (struct sockaddr *)&addr, &len);
   else
@@ -78,37 +76,22 @@ void add_sockaddr_to_checksum(int fd, bool local, boost::crc_32_type &crc) {
 
   if (addr.ss_family == AF_INET) {
     struct sockaddr_in *s = (struct sockaddr_in *)&addr;
-    port = ntohs(s->sin_port);
-    const char *retstr = inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof(ipstr));
+    na.port = ntohs(s->sin_port);
+    const char *retstr = inet_ntop(AF_INET, &s->sin_addr, na.addr, sizeof(na.addr));
     assert(retstr != NULL);
   } else {
     struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
-    port = ntohs(s->sin6_port);
+    na.port = ntohs(s->sin6_port);
     const char *retstr =
-        inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof(ipstr));
+        inet_ntop(AF_INET6, &s->sin6_addr, na.addr, sizeof(na.addr));
     assert(retstr != NULL);
   }
-
-  crc.process_bytes(ipstr, strlen(ipstr));
-  crc.process_bytes(&port, sizeof(int));
 }
 
 void update_stats(int fd, bool send, const void*buf, ssize_t cnt) {
   ipc_info &i = getInfo(getEP(fd));
   size_t &bytes = get_byte_counter(i, send);
   if (cnt > 0) {
-
-    if (get_byte_counter(i, true) == 0 &&
-        get_byte_counter(i, false) == 0) {
-      // sent: Local -> Remote
-      add_sockaddr_to_checksum(fd, true, i.crc_sent);
-      add_sockaddr_to_checksum(fd, false, i.crc_sent);
-
-      // recv: Remote -> Local
-      add_sockaddr_to_checksum(fd, false, i.crc_recv);
-      add_sockaddr_to_checksum(fd, true, i.crc_recv);
-    }
-
     if (bytes < TRANS_THRESHOLD) {
       if (send) {
         i.crc_sent.process_bytes(buf, cnt);
@@ -147,11 +130,14 @@ void attempt_optimization(int fd, bool send) {
     size_t attempts = 0;
     uint32_t crc_sent = i.crc_sent.checksum();
     uint32_t crc_recv = i.crc_recv.checksum();
-    ipclog("CRC's: %x, %x\n", crc_sent, crc_recv);
+    netaddr src, dst;
+    get_netaddr(fd, src, true);
+    get_netaddr(fd, dst, false);
+    ipclog("CRC's: %x, %x; Src=%s:%d, Dst=%s:%d\n", crc_sent, crc_recv, src.addr, src.port, dst.addr, dst.port);
     while (true) {
       bool last = (++attempts >= MAX_SYNC_ATTEMPTS + 3);
       remote =
-          ipcd_crc_kludge(ep, crc_sent, crc_recv, last);
+          ipcd_find_pair(ep, src, dst, crc_sent, crc_recv, last);
       if (remote != EP_INVALID)
         break;
       if (last)

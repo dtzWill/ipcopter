@@ -15,10 +15,16 @@
 #define _IPCD_H_
 
 #include <stdint.h>
+#include <arpa/inet.h> // For INET6_ADDRSTRLEN :/
 
 typedef uint32_t endpoint;
 
 const endpoint EP_INVALID = ~endpoint(0);
+
+typedef struct {
+  char addr[INET6_ADDRSTRLEN];
+  int port;
+} netaddr;
 
 // Initialize connection
 void __ipcd_init();
@@ -47,6 +53,10 @@ endpoint ipcd_endpoint_kludge(endpoint local);
 // THRESH_CRC_KLUDGE
 endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc,
                          bool last);
+
+// FIND_PAIR
+endpoint ipcd_find_pair(endpoint local, netaddr &src, netaddr &dst,
+                        uint32_t s_crc, uint32_t r_crc, bool last);
 
 // Does ipcd need the specified fd?
 bool ipcd_is_protected(int fd);
