@@ -31,7 +31,9 @@ typedef struct {
   netaddr dst;
   uint32_t s_crc;
   uint32_t r_crc;
-  // TODO: Timing info
+  bool is_accept;
+  struct timespec connect_start;
+  struct timespec connect_end;
 } pairing_info;
 
 // Initialize connection

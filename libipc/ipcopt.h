@@ -29,11 +29,13 @@ extern "C" {
 void __ipcopt_init();
 
 // FD registration
-void register_inet_socket(int fd);
+void register_inet_socket(int fd, bool accept);
 char is_registered_socket(int fd);
 char is_optimized_socket_safe(int fd);
 void unregister_inet_socket(int fd);
 void dup_inet_socket(int fd, int fd2);
+
+bool is_accept(int fd);
 
 // Options
 void set_nonblocking(int fd, bool nonblocking);

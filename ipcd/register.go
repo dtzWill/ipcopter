@@ -36,6 +36,7 @@ type EndPointInfo struct {
 	R_CRC      int
 	Src        NetAddr
 	Dst        NetAddr
+	IsAccept   bool
 	RefCount   int
 	ID         int
 }
@@ -69,7 +70,7 @@ func (C *IPCContext) register(PID, FD int) (int, error) {
 
 	ID := C.FreeID
 
-	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 0 /* S_CRC */, 0 /* R_CRC */, InvalidAddr() /* Src */, InvalidAddr() /* Dst*/, 1 /* refcnt */, ID}
+	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 0 /* S_CRC */, 0 /* R_CRC */, InvalidAddr() /* Src */, InvalidAddr() /* Dst*/, false /* IsAccept */, 1 /* refcnt */, ID}
 
 	C.EPMap[ID] = &EPI
 
@@ -329,7 +330,7 @@ func (C *IPCContext) crc_match(ID, S_CRC, R_CRC int, LastTry bool) (int, error) 
 	return MatchID, nil
 }
 
-func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, LastTry bool) (int, error) {
+func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, IsAccept, LastTry bool) (int, error) {
 	C.Lock.Lock()
 	defer C.Lock.Unlock()
 
@@ -343,15 +344,15 @@ func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, LastT
 		return EPI.KludgePair.ID, nil
 	}
 
-	// TODO: Zero is a valid CRC value!
-	if EPI.S_CRC != 0 || EPI.R_CRC != 0 {
+	if EPI.Src.isValid() || EPI.Dst.isValid() {
 		if EPI.S_CRC != S_CRC && EPI.R_CRC != R_CRC {
 			return ID, errors.New("pairing attempted with changed CRC values")
 		}
-	}
-	if EPI.Src.isValid() || EPI.Dst.isValid() {
 		if EPI.Src != Src || EPI.Dst != Dst {
 			return ID, errors.New("pairing attempted with changed address")
+		}
+		if EPI.IsAccept != IsAccept {
+			return ID, errors.New("pairing attempted with changed is_accept")
 		}
 	}
 
@@ -359,6 +360,7 @@ func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, LastT
 	EPI.R_CRC = R_CRC
 	EPI.Src = Src
 	EPI.Dst = Dst
+	EPI.IsAccept = IsAccept
 
 	MatchID := -1
 	for k, v := range C.EPMap {
@@ -370,6 +372,10 @@ func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, LastT
 		}
 		if v.S_CRC == R_CRC && v.R_CRC == S_CRC &&
 			v.Src == Dst && v.Dst == Src {
+			// One side should have accepted, other shouldn't.
+			if v.IsAccept != !IsAccept {
+				return ID, errors.New("match found but is_accept mismatch??")
+			}
 			MatchID = k
 			break
 		}

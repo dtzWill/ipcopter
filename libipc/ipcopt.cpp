@@ -101,7 +101,7 @@ void invalidate(endpoint ep) {
   i.reset();
 }
 
-void register_inet_socket(int fd) {
+void register_inet_socket(int fd, bool is_accept) {
   if (!ipcd_enabled())
     return;
   // Freshly created socket
@@ -117,6 +117,7 @@ void register_inet_socket(int fd) {
   i.reset();
 
   i.ref_count++;
+  i.is_accept = is_accept;
   i.state = STATE_UNOPT;
 }
 
@@ -287,3 +288,11 @@ void set_cloexec(int fd, bool cloexec) {
     return;
   getFDInfo(fd).close_on_exec = cloexec;
 }
+
+bool is_accept(int fd) {
+  endpoint ep = getEP(fd);
+  assert(valid_ep(ep));
+
+  return getInfo(ep).is_accept;
+}
+

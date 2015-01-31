@@ -69,23 +69,30 @@ struct ipc_info {
   size_t bytes_recv;
   boost::crc_32_type crc_sent;
   boost::crc_32_type crc_recv;
+  struct timespec connect_start;
+  struct timespec connect_end;
   // Does this endpoint have a local fd?
   int localfd;
   uint16_t ref_count;
   EndpointState state;
   // Non-blocking is descriptor-specific
   bool non_blocking;
+  // Was this created with accept()?
+  bool is_accept;
 
   ipc_info() { reset(); }
   void reset() {
     bytes_sent = 0;
     bytes_recv = 0;
+    connect_start.tv_sec = connect_start.tv_nsec = 0;
+    connect_end.tv_sec = connect_end.tv_nsec = 0;
     crc_sent.reset();
     crc_recv.reset();
     localfd = 0;
     ref_count = 0;
     state = STATE_INVALID;
     non_blocking = false;
+    is_accept = 0;
   }
 };
 

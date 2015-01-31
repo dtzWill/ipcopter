@@ -279,8 +279,8 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 		}
 		return fmt.Sprintf("PAIR %d", Pair), nil
 	case "FIND_PAIR":
-		// FIND_PAIR <endpoint id> <srcip> <srcport> <dstip> <dstport> <send_crc> <recv_crc> <done>
-		if len(spaceDelimTokens) < 9 {
+		// FIND_PAIR <endpoint id> <srcip> <srcport> <dstip> <dstport> <send_crc> <recv_crc> <is_accept> <done>
+		if len(spaceDelimTokens) < 10 {
 			RErr = InsufficientArgsErr()
 			return
 		}
@@ -309,7 +309,12 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 			RErr = InvalidParameterErr(err.Error())
 			return
 		}
-		LastTry, err := strconv.Atoi(spaceDelimTokens[8])
+		IsAccept, err := strconv.Atoi(spaceDelimTokens[8])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		LastTry, err := strconv.Atoi(spaceDelimTokens[9])
 		if err != nil {
 			RErr = InvalidParameterErr(err.Error())
 			return
@@ -317,7 +322,7 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 
 		Src := NetAddr{SIP, SPort}
 		Dst := NetAddr{DIP, DPort}
-		Pair, err := Ctxt.find_pair(EP, Src, Dst, S_CRC, R_CRC, LastTry != 0)
+		Pair, err := Ctxt.find_pair(EP, Src, Dst, S_CRC, R_CRC, IsAccept != 0, LastTry != 0)
 		if err != nil {
 			RErr = UnknownErr(err.Error())
 			return

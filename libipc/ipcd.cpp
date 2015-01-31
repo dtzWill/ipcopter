@@ -424,9 +424,9 @@ endpoint ipcd_find_pair(endpoint local, pairing_info &pi, bool last) {
   connect_if_needed();
 
   char buf[300];
-  int len = sprintf(buf, "FIND_PAIR %d %s %d %s %d %d %d %d\n", local,
+  int len = sprintf(buf, "FIND_PAIR %d %s %d %s %d %d %d %d %d\n", local,
                     pi.src.addr, pi.src.port, pi.dst.addr, pi.dst.port,
-                    pi.s_crc, pi.r_crc, last ? 1 : 0);
+                    pi.s_crc, pi.r_crc, pi.is_accept, last ? 1 : 0);
   ASSERT_WITH_LOCK(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
@@ -438,8 +438,9 @@ endpoint ipcd_find_pair(endpoint local, pairing_info &pi, bool last) {
 
   buf[err] = 0;
   int id;
-  ipclog("find_pair(%d, <%s:%d>, <%s:%d>, %d, %d) = %s\n", local, pi.src.addr,
-         pi.src.port, pi.dst.addr, pi.dst.port, pi.s_crc, pi.r_crc, buf);
+  ipclog("find_pair(%d, <%s:%d>, <%s:%d>, %d, %d, %d) = %s\n", local,
+         pi.src.addr, pi.src.port, pi.dst.addr, pi.dst.port, pi.s_crc, pi.r_crc,
+         pi.is_accept, buf);
   int n = sscanf(buf, "200 PAIR %d\n", &id);
   if (n == 1) {
     return id;
