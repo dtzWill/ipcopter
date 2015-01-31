@@ -173,10 +173,14 @@ static inline int __internal_bind(int fd, const struct sockaddr *addr,
 
 static inline int __internal_connect(int fd, const struct sockaddr *addr,
                                      socklen_t addrlen) {
-  assert(!is_accept(fd));
-  set_time(fd, true, get_time());
+  bool is_reg = is_registered_socket(fd);
+  if (is_reg) {
+    assert(!is_accept(fd));
+    set_time(fd, true, get_time());
+  }
   int ret = __real_connect(fd, addr, addrlen);
-  set_time(fd, false, get_time());
+  if (is_reg)
+    set_time(fd, false, get_time());
   return ret;
 }
 
