@@ -408,10 +408,12 @@ func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, IsAcc
 			}
 			ConnectToAcceptReturn := Server.End.Sub(Client.Start)
 			AcceptReturnToConnectReturn := Client.End.Sub(Server.End)
-			fmt.Printf("Connect-Start To Accept Return: %s\n", ConnectToAcceptReturn)
-			fmt.Printf("Accept Return to Connect Return: %s\n", AcceptReturnToConnectReturn)
-			fmt.Printf("Connect Duration: %s\n", Client.End.Sub(Client.Start))
-			fmt.Printf("Accept Duration: %s\n", Server.End.Sub(Server.Start))
+			if false {
+				fmt.Printf("Connect-Start To Accept Return: %s\n", ConnectToAcceptReturn)
+				fmt.Printf("Accept Return to Connect Return: %s\n", AcceptReturnToConnectReturn)
+				fmt.Printf("Connect Duration: %s\n", Client.End.Sub(Client.Start))
+				fmt.Printf("Accept Duration: %s\n", Server.End.Sub(Server.Start))
+			}
 			if CheckTimeDelta(AcceptReturnToConnectReturn) {
 				MatchID = k
 			} else {
