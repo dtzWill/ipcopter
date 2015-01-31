@@ -60,10 +60,48 @@ func (N *NetAddr) isValid() bool {
 	return N.Port != -1
 }
 
-func CheckTimeDelta(D time.Duration) bool {
-	Epsilon := time.Duration(200 * time.Microsecond)
+func (E *EndPointInfo) matchesWithoutCRC(R *EndPointInfo) bool {
+	// Not enough information to say.
+	if !E.Src.isValid() || !R.Src.isValid() {
+		return false
+	}
+	// If already has a pair, also nothing to be done here
+	if E.KludgePair != nil || R.KludgePair != nil {
+		return false
+	}
 
-	return D <= Epsilon && D >= -Epsilon
+	if E.IsAccept == R.IsAccept {
+		return false
+	}
+	if E.Src != R.Dst || E.Dst != R.Src {
+		return false
+	}
+
+	// Use "IsAccept" to designate client/server
+	Client, Server := E, R
+	if !E.IsAccept {
+		Client, Server = R, E
+	}
+
+	// Hmm, might not actually matter which is which
+	// looking at the code below.  Oh well O:)
+
+	if Client.Start.After(Server.End) {
+		// Accept returned before connect() finished, definitely not valid
+		return false
+	}
+	if Server.Start.After(Client.End) {
+		// connect() finished before accept was called, also not valid.
+		return false
+	}
+
+	// TODO: Check time delta? Or is this enough?
+
+	return true
+}
+func (E *EndPointInfo) matches(R *EndPointInfo) bool {
+	return E.matchesWithoutCRC(R) &&
+		E.S_CRC == R.R_CRC && E.R_CRC == R.S_CRC
 }
 
 func NewContext() *IPCContext {
@@ -352,6 +390,8 @@ func (C *IPCContext) endpoint_info(ID int, Src, Dst NetAddr, Start, End time.Tim
 	C.Lock.Lock()
 	defer C.Lock.Unlock()
 
+	// TODO: Access same clock ourselves to verify updates?
+
 	EPI, exist := C.EPMap[ID]
 	if !exist {
 		return errors.New(fmt.Sprintf("Invalid Endpoint ID '%d'", ID))
@@ -411,69 +451,54 @@ func (C *IPCContext) find_pair(ID, S_CRC, R_CRC int, LastTry bool) (int, error) 
 	EPI.S_CRC = S_CRC
 	EPI.R_CRC = R_CRC
 
-	MatchID := -1
+	// Find matches ignoring timing information and crc
+	Matches := []int{}
+
 	for k, v := range C.EPMap {
 		if k == ID {
 			continue
 		}
-		if v.KludgePair != nil {
-			continue
+		if EPI.matchesWithoutCRC(v) {
+			Matches = append(Matches, k)
 		}
-		if v.S_CRC == R_CRC && v.R_CRC == S_CRC &&
-			v.Src == EPI.Dst && v.Dst == EPI.Src {
-			// One side should have accepted, other shouldn't.
-			if v.IsAccept != !EPI.IsAccept {
-				return ID, errors.New("match found but is_accept mismatch??")
-			}
+	}
 
-			Client, Server := v, EPI
-			if !EPI.IsAccept {
-				Client, Server = EPI, v
+	if len(Matches) > 1 {
+		return ID, errors.New("too many potential matches")
+	}
+	if len(Matches) > 0 {
+		MatchID := Matches[0]
+		Match := C.EPMap[MatchID]
+		// Try to find endpoints that could
+		// be matched with our potential match.
+		Dups := []int{}
+		for k, v := range C.EPMap {
+			if k == ID {
+				continue
 			}
-			if Client.Start.After(Server.End) {
-				// Accept returned before connect() finished, definitely not valid
-				fmt.Println("Client connected after server accepted")
-				return ID, nil
+			if Match.matchesWithoutCRC(v) {
+				Dups = append(Dups, k)
 			}
-			if Server.Start.After(Client.End) {
-				// connect() finished before accept was called, also not valid.
-				fmt.Println("Client connected before server accepted")
-			}
-			ConnectToAcceptReturn := Server.End.Sub(Client.Start)
-			AcceptReturnToConnectReturn := Client.End.Sub(Server.End)
-			if false {
-				fmt.Printf("Connect-Start To Accept Return: %s\n", ConnectToAcceptReturn)
-				fmt.Printf("Accept Return to Connect Return: %s\n", AcceptReturnToConnectReturn)
-				fmt.Printf("Connect Duration: %s\n", Client.End.Sub(Client.Start))
-				fmt.Printf("Accept Duration: %s\n", Server.End.Sub(Server.Start))
-			}
-			if CheckTimeDelta(AcceptReturnToConnectReturn) {
-				MatchID = k
-			} else {
-				// times weren't close enough, bail
-				fmt.Println("Times not close enough!!")
-				return ID, nil
-			}
-			break
+		}
+
+		if len(Dups) > 0 {
+			return ID, errors.New("potential dup detected")
+		}
+
+		// No dups! Let's check CRC:
+		if EPI.matches(Match) {
+			EPI.KludgePair = Match
+			Match.KludgePair = EPI
+			return MatchID, nil
 		}
 	}
 	// NOPAIR
-	if MatchID == -1 {
-		// If this is the last time the program
-		// will attempt to find its communication pair,
-		// remove the CRC information to prevent pairing.
-		if LastTry {
-			EPI.S_CRC = 0
-			EPI.R_CRC = 0
-			EPI.Src = InvalidAddr()
-			EPI.Dst = InvalidAddr()
-		}
-		return ID, nil
+	// If this is the last time the program
+	// will attempt to find its communication pair,
+	// remove the CRC information to prevent pairing.
+	if LastTry {
+		EPI.S_CRC = 0
+		EPI.R_CRC = 0
 	}
-
-	Match := C.EPMap[MatchID]
-	EPI.KludgePair = Match
-	Match.KludgePair = EPI
-
-	return MatchID, nil
+	return ID, nil
 }
