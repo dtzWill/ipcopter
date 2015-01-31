@@ -426,3 +426,63 @@ func TestEndpointInfo(t *testing.T) {
 	CheckReq("ENDPOINT_INFO 0 192.168.0.2 80 192.168.0.3 30 0 1 0 0 1\n", "303 cannot change timings", t)
 	CheckReq("ENDPOINT_INFO 0 192.168.0.2 80 192.168.0.3 30 0 1 0 0 0\n", "303 cannot change is_accept", t)
 }
+
+func TestTimingOK(t *testing.T) {
+	P := StartServerProcess()
+	defer Stop(P)
+
+	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
+	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
+	CheckReq("REGISTER 1 20\n", "200 ID 2", t)
+	CheckReq("REGISTER 2 10\n", "200 ID 3", t)
+	CheckReq("REGISTER 2 15\n", "200 ID 4", t)
+
+	// Accept: 1-3, Connect: 2-4
+	CheckReq("ENDPOINT_INFO 0 192.168.0.2 80 192.168.0.3 30 1 0 3 0 1\n", "200 OK", t)
+	CheckReq("ENDPOINT_INFO 1 192.168.0.3 30 192.168.0.2 80 2 0 4 0 0\n", "200 OK", t)
+
+	// This should work.
+	CheckReq("FIND_PAIR 0 1234 4455 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 1 4455 1234 0\n", "200 PAIR 0", t)
+	CheckReq("FIND_PAIR 0 1234 4455 0\n", "200 PAIR 1", t)
+}
+
+func TestTimingAcceptEarly(t *testing.T) {
+	P := StartServerProcess()
+	defer Stop(P)
+
+	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
+	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
+	CheckReq("REGISTER 1 20\n", "200 ID 2", t)
+	CheckReq("REGISTER 2 10\n", "200 ID 3", t)
+	CheckReq("REGISTER 2 15\n", "200 ID 4", t)
+
+	// Accept: 1-2, Connect: 3-4
+	CheckReq("ENDPOINT_INFO 0 192.168.0.2 80 192.168.0.3 30 1 0 2 0 1\n", "200 OK", t)
+	CheckReq("ENDPOINT_INFO 1 192.168.0.3 30 192.168.0.2 80 3 0 4 0 0\n", "200 OK", t)
+
+	// This should NOT work.
+	CheckReq("FIND_PAIR 0 1234 4455 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 1 4455 1234 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 0 1234 4455 0\n", "200 NOPAIR", t)
+}
+
+func TestTimingAcceptLate(t *testing.T) {
+	P := StartServerProcess()
+	defer Stop(P)
+
+	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
+	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
+	CheckReq("REGISTER 1 20\n", "200 ID 2", t)
+	CheckReq("REGISTER 2 10\n", "200 ID 3", t)
+	CheckReq("REGISTER 2 15\n", "200 ID 4", t)
+
+	// Accept: 3-4, Connect: 1-2
+	CheckReq("ENDPOINT_INFO 0 192.168.0.2 80 192.168.0.3 30 3 0 4 0 1\n", "200 OK", t)
+	CheckReq("ENDPOINT_INFO 1 192.168.0.3 30 192.168.0.2 80 1 0 2 0 0\n", "200 OK", t)
+
+	// This should NOT work.
+	CheckReq("FIND_PAIR 0 1234 4455 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 1 4455 1234 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 0 1234 4455 0\n", "200 NOPAIR", t)
+}
