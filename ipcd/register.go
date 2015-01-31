@@ -61,7 +61,7 @@ func (N *NetAddr) isValid() bool {
 }
 
 func CheckTimeDelta(D time.Duration) bool {
-	Epsilon := time.Duration(150 * time.Microsecond)
+	Epsilon := time.Duration(200 * time.Microsecond)
 
 	return D <= Epsilon && D >= -Epsilon
 }
