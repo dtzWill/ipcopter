@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 
 // TODO: This table is presently not used thread-safe at all!
 libipc_state state;
@@ -296,3 +297,18 @@ bool is_accept(int fd) {
   return getInfo(ep).is_accept;
 }
 
+struct timespec get_time() {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return ts;
+}
+
+void set_time(int fd, bool start, struct timespec t) {
+  endpoint ep = getEP(fd);
+  assert(valid_ep(ep));
+
+  ipc_info &i = getInfo(ep);
+  struct timespec &target = start ? i.connect_start : i.connect_end;
+  assert((target.tv_sec == 0 && target.tv_nsec == 0) && "Time already set??");
+  target = t;
+}

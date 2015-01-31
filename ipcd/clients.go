@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const SOCKET_PATH = "/tmp/ipcd.sock"
@@ -279,8 +280,13 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 		}
 		return fmt.Sprintf("PAIR %d", Pair), nil
 	case "FIND_PAIR":
-		// FIND_PAIR <endpoint id> <srcip> <srcport> <dstip> <dstport> <send_crc> <recv_crc> <is_accept> <done>
-		if len(spaceDelimTokens) < 10 {
+		// FIND_PAIR <endpoint id>
+		//           <srcip> <srcport> <dstip> <dstport>
+		//           <send_crc> <recv_crc>
+		//           <is_accept> <done>
+		//           <start_sec> <start_nsec>
+		//           <end_sec> <end_nsec>
+		if len(spaceDelimTokens) < 14 {
 			RErr = InsufficientArgsErr()
 			return
 		}
@@ -319,10 +325,32 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 			RErr = InvalidParameterErr(err.Error())
 			return
 		}
+		Start_S, err := strconv.ParseInt(spaceDelimTokens[10], 10, 64)
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		Start_NS, err := strconv.ParseInt(spaceDelimTokens[11], 10, 64)
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		End_S, err := strconv.ParseInt(spaceDelimTokens[12], 10, 64)
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		End_NS, err := strconv.ParseInt(spaceDelimTokens[13], 10, 64)
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
 
 		Src := NetAddr{SIP, SPort}
 		Dst := NetAddr{DIP, DPort}
-		Pair, err := Ctxt.find_pair(EP, Src, Dst, S_CRC, R_CRC, IsAccept != 0, LastTry != 0)
+		Start := time.Unix(Start_S, Start_NS)
+		End := time.Unix(End_S, End_NS)
+		Pair, err := Ctxt.find_pair(EP, Src, Dst, S_CRC, R_CRC, IsAccept != 0, LastTry != 0, Start, End)
 		if err != nil {
 			RErr = UnknownErr(err.Error())
 			return

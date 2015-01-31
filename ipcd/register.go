@@ -330,7 +330,7 @@ func (C *IPCContext) crc_match(ID, S_CRC, R_CRC int, LastTry bool) (int, error) 
 	return MatchID, nil
 }
 
-func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, IsAccept, LastTry bool) (int, error) {
+func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, IsAccept, LastTry bool, Start, End time.Time) (int, error) {
 	C.Lock.Lock()
 	defer C.Lock.Unlock()
 

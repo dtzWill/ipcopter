@@ -136,6 +136,8 @@ void attempt_optimization(int fd, bool send) {
     pi.s_crc = i.crc_sent.checksum();
     pi.r_crc = i.crc_recv.checksum();
     pi.is_accept = i.is_accept;
+    pi.connect_start = i.connect_start;
+    pi.connect_end = i.connect_end;
 
     while (true) {
       bool last = (++attempts >= MAX_SYNC_ATTEMPTS + 3);

@@ -424,9 +424,11 @@ endpoint ipcd_find_pair(endpoint local, pairing_info &pi, bool last) {
   connect_if_needed();
 
   char buf[300];
-  int len = sprintf(buf, "FIND_PAIR %d %s %d %s %d %d %d %d %d\n", local,
-                    pi.src.addr, pi.src.port, pi.dst.addr, pi.dst.port,
-                    pi.s_crc, pi.r_crc, pi.is_accept, last ? 1 : 0);
+  int len = sprintf(
+      buf, "FIND_PAIR %d %s %d %s %d %d %d %d %d %ld %ld %ld %ld\n", local,
+      pi.src.addr, pi.src.port, pi.dst.addr, pi.dst.port, pi.s_crc, pi.r_crc,
+      pi.is_accept, last ? 1 : 0, pi.connect_start.tv_sec,
+      pi.connect_start.tv_nsec, pi.connect_end.tv_sec, pi.connect_end.tv_nsec);
   ASSERT_WITH_LOCK(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {

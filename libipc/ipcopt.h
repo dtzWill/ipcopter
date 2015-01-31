@@ -46,6 +46,10 @@ int getlocalfd(int fd);
 void register_inherited_fds();
 char is_protected_fd(int fd);
 
+// Timing
+struct timespec get_time();
+void set_time(int fd, bool start, struct timespec t);
+
 // R/W operations using best available transport
 ssize_t do_ipc_send(int fd, const void *buf, size_t count, int flags);
 ssize_t do_ipc_recv(int fd, void *buf, size_t count, int flags);

@@ -354,17 +354,17 @@ func TestFindPair(t *testing.T) {
 	CheckReq("REGISTER 2 10\n", "200 ID 3", t)
 	CheckReq("REGISTER 2 15\n", "200 ID 4", t)
 
-	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0\n", "200 NOPAIR", t)
-	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0\n", "200 NOPAIR", t)
-	CheckReq("FIND_PAIR 1 192.168.0.3 30 192.168.0.2 80 4455 1234 0 0\n", "200 PAIR 0", t)
-	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0\n", "200 PAIR 1", t)
+	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0 0 0 0 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0 0 0 0 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 1 192.168.0.3 30 192.168.0.2 80 4455 1234 0 0 0 0 0 0\n", "200 PAIR 0", t)
+	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0 0 0 0 0\n", "200 PAIR 1", t)
 
 	CheckReq("LOCALIZE 0 1\n", "200 OK", t)
 
 	// TODO: How to handle this?
 	// 0 and 1 are paired, 2 comes along trying to pair
 	// using same information as 0 provided.
-	CheckReq("FIND_PAIR 2 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 2 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0 0 0 0 0\n", "200 NOPAIR", t)
 }
 
 func TestFindPairMiss(t *testing.T) {
@@ -378,15 +378,15 @@ func TestFindPairMiss(t *testing.T) {
 	CheckReq("REGISTER 2 15\n", "200 ID 4", t)
 
 	// Try to find a pair for 0 a few times...
-	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0\n", "200 NOPAIR", t)
-	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0 0 0 0 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 0 0 0 0 0\n", "200 NOPAIR", t)
 	// Notice the 'LastTry' flag is set here:
-	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 1\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 0 192.168.0.2 80 192.168.0.3 30 1234 4455 1 1 0 0 0 0\n", "200 NOPAIR", t)
 	// Client then gives up, and never contacts us again.
 	// Immediately afterwards, the other endpoint starts
 	// asking for its endpoint.
 	// If we do the match, one endpoint will try to use
 	// the original socket and the other will use the local one.
 	// Don't do this!
-	CheckReq("FIND_PAIR 1 192.168.0.3 30 192.168.0.2 80 4455 1234 0 0\n", "200 NOPAIR", t)
+	CheckReq("FIND_PAIR 1 192.168.0.3 30 192.168.0.2 80 4455 1234 0 0 0 0 0 0\n", "200 NOPAIR", t)
 }

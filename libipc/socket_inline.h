@@ -146,13 +146,20 @@ static inline ssize_t __internal_readv(int fd, const struct iovec *iov,
 
 static inline int __internal_accept4(int fd, struct sockaddr *addr,
                                      socklen_t *addrlen, int flags) {
+  struct timespec start, end;
+  bool is_registered = is_registered_socket(fd);
+  if (is_registered)
+    start = get_time();
   int ret = __real_accept4(fd, addr, addrlen, flags);
-  if (is_registered_socket(fd)) {
+  if (is_registered) {
+    end = get_time();
     ipclog("accept/accept4(fd=%d, flags=%d) -> %d\n", fd, flags, ret);
     if (ret != -1) {
       register_inet_socket(ret, true);
       set_nonblocking(ret, (flags & SOCK_NONBLOCK) != 0);
       set_cloexec(ret, (flags & SOCK_CLOEXEC) != 0);
+      set_time(fd, true, start);
+      set_time(fd, false, end);
     }
   }
   return ret;
@@ -167,7 +174,9 @@ static inline int __internal_bind(int fd, const struct sockaddr *addr,
 static inline int __internal_connect(int fd, const struct sockaddr *addr,
                                      socklen_t addrlen) {
   assert(!is_accept(fd));
+  set_time(fd, true, get_time());
   int ret = __real_connect(fd, addr, addrlen);
+  set_time(fd, false, get_time());
   return ret;
 }
 
