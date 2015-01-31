@@ -158,8 +158,8 @@ static inline int __internal_accept4(int fd, struct sockaddr *addr,
       register_inet_socket(ret, true);
       set_nonblocking(ret, (flags & SOCK_NONBLOCK) != 0);
       set_cloexec(ret, (flags & SOCK_CLOEXEC) != 0);
-      set_time(fd, true, start);
-      set_time(fd, false, end);
+      set_time(ret, true, start);
+      set_time(ret, false, end);
     }
   }
   return ret;
