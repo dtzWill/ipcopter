@@ -10,12 +10,12 @@ DYNAMIC_LIB := libipc.so
 SHARED_LDFLAGS = -shared $(WRAP_FLAGS)
 SHARED_LDFLAGS += -ldl # dlopen, etc.
 SHARED_LDFLAGS += -lrt # shm_open, etc.
-SHARED_LDFLAGS += -flto -O4
+SHARED_LDFLAGS += -O3 -flto
 SHARED_LDFLAGS += -static-libstdc++
 SHARED_LDFLAGS += -static-libgcc
 SHARED_LDFLAGS += -Wl,-O1,--sort-common,--as-needed,-z,relro
 
-OPTFLAGS := -O4 -flto
+OPTFLAGS := -O3 -flto
 WARNFLAGS := -Wall -Wextra -Werror
 EXTRAFLAGS := -fPIC -fno-strict-aliasing
 EXTRAFLAGS += -fno-rtti -fno-exceptions
