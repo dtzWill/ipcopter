@@ -64,30 +64,6 @@ char get_threshold_indicator_char(ipc_info &i, bool send) {
   return '=';
 }
 
-void get_netaddr(int fd, netaddr &na, bool local) {
-  struct sockaddr_storage addr;
-  socklen_t len = sizeof(addr);
-  int ret;
-  if (local)
-    ret = getsockname(fd, (struct sockaddr *)&addr, &len);
-  else
-    ret = getpeername(fd, (struct sockaddr *)&addr, &len);
-  assert(ret == 0);
-
-  if (addr.ss_family == AF_INET) {
-    struct sockaddr_in *s = (struct sockaddr_in *)&addr;
-    na.port = ntohs(s->sin_port);
-    const char *retstr = inet_ntop(AF_INET, &s->sin_addr, na.addr, sizeof(na.addr));
-    assert(retstr != NULL);
-  } else {
-    struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
-    na.port = ntohs(s->sin6_port);
-    const char *retstr =
-        inet_ntop(AF_INET6, &s->sin6_addr, na.addr, sizeof(na.addr));
-    assert(retstr != NULL);
-  }
-}
-
 void update_stats(int fd, bool send, const void*buf, ssize_t cnt) {
   ipc_info &i = getInfo(getEP(fd));
   size_t &bytes = get_byte_counter(i, send);
@@ -130,14 +106,8 @@ void attempt_optimization(int fd, bool send) {
     size_t attempts = 0;
 
     pairing_info pi;
-    get_netaddr(fd, pi.src, true);
-    get_netaddr(fd, pi.dst, false);
-
     pi.s_crc = i.crc_sent.checksum();
     pi.r_crc = i.crc_recv.checksum();
-    pi.is_accept = i.is_accept;
-    pi.connect_start = i.connect_start;
-    pi.connect_end = i.connect_end;
 
     while (true) {
       bool last = (++attempts >= MAX_SYNC_ATTEMPTS + 3);

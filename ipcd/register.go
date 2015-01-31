@@ -348,7 +348,41 @@ func (C *IPCContext) crc_match(ID, S_CRC, R_CRC int, LastTry bool) (int, error) 
 	return MatchID, nil
 }
 
-func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, IsAccept, LastTry bool, Start, End time.Time) (int, error) {
+func (C *IPCContext) endpoint_info(ID int, Src, Dst NetAddr, Start, End time.Time, IsAccept bool) error {
+	C.Lock.Lock()
+	defer C.Lock.Unlock()
+
+	EPI, exist := C.EPMap[ID]
+	if !exist {
+		return errors.New(fmt.Sprintf("Invalid Endpoint ID '%d'", ID))
+	}
+
+	if EPI.KludgePair != nil {
+		return errors.New("Cannot update info for paired endpoint")
+	}
+
+	if EPI.Src.isValid() || EPI.Dst.isValid() {
+		if EPI.Src != Src || EPI.Dst != Dst {
+			return errors.New("cannot change address")
+		}
+		if EPI.IsAccept != IsAccept {
+			return errors.New("cannot change is_accept")
+		}
+		if EPI.Start != Start || EPI.End != EPI.End {
+			return errors.New("cannot change timings")
+		}
+	}
+
+	EPI.Src = Src
+	EPI.Dst = Dst
+	EPI.Start = Start
+	EPI.End = End
+	EPI.IsAccept = IsAccept
+
+	return nil
+}
+
+func (C *IPCContext) find_pair(ID, S_CRC, R_CRC int, LastTry bool) (int, error) {
 	C.Lock.Lock()
 	defer C.Lock.Unlock()
 
@@ -362,25 +396,20 @@ func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, IsAcc
 		return EPI.KludgePair.ID, nil
 	}
 
-	if EPI.Src.isValid() || EPI.Dst.isValid() {
+	// XXX: Zero is a valid CRC value!!
+	// If we already received CRC information, ensure it's the same
+	if EPI.S_CRC != 0 || EPI.R_CRC != 0 {
 		if EPI.S_CRC != S_CRC && EPI.R_CRC != R_CRC {
 			return ID, errors.New("pairing attempted with changed CRC values")
 		}
-		if EPI.Src != Src || EPI.Dst != Dst {
-			return ID, errors.New("pairing attempted with changed address")
-		}
-		if EPI.IsAccept != IsAccept {
-			return ID, errors.New("pairing attempted with changed is_accept")
-		}
+	}
+
+	if !EPI.Src.isValid() || !EPI.Dst.isValid() {
+		return ID, errors.New("pairing without endpoint information")
 	}
 
 	EPI.S_CRC = S_CRC
 	EPI.R_CRC = R_CRC
-	EPI.Src = Src
-	EPI.Dst = Dst
-	EPI.IsAccept = IsAccept
-	EPI.Start = Start
-	EPI.End = End
 
 	MatchID := -1
 	for k, v := range C.EPMap {
@@ -391,14 +420,14 @@ func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, IsAcc
 			continue
 		}
 		if v.S_CRC == R_CRC && v.R_CRC == S_CRC &&
-			v.Src == Dst && v.Dst == Src {
+			v.Src == EPI.Dst && v.Dst == EPI.Src {
 			// One side should have accepted, other shouldn't.
-			if v.IsAccept != !IsAccept {
+			if v.IsAccept != !EPI.IsAccept {
 				return ID, errors.New("match found but is_accept mismatch??")
 			}
 
 			Client, Server := v, EPI
-			if !IsAccept {
+			if !EPI.IsAccept {
 				Client, Server = EPI, v
 			}
 			if Client.Start.After(Server.End) {

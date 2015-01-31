@@ -69,6 +69,7 @@ struct ipc_info {
   size_t bytes_recv;
   boost::crc_32_type crc_sent;
   boost::crc_32_type crc_recv;
+  // XXX: We don't really need to store this...
   struct timespec connect_start;
   struct timespec connect_end;
   // Does this endpoint have a local fd?

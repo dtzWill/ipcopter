@@ -279,14 +279,13 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 			return "NOPAIR", nil
 		}
 		return fmt.Sprintf("PAIR %d", Pair), nil
-	case "FIND_PAIR":
-		// FIND_PAIR <endpoint id>
+	case "ENDPOINT_INFO":
+		// ENDPOINT_INFO <endpoint_id>
 		//           <srcip> <srcport> <dstip> <dstport>
-		//           <send_crc> <recv_crc>
-		//           <is_accept> <done>
 		//           <start_sec> <start_nsec>
 		//           <end_sec> <end_nsec>
-		if len(spaceDelimTokens) < 14 {
+		//           <is_accept>
+		if len(spaceDelimTokens) < 11 {
 			RErr = InsufficientArgsErr()
 			return
 		}
@@ -305,42 +304,27 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 		if err != nil {
 			RErr = InvalidParameterErr(err.Error())
 		}
-		S_CRC, err := strconv.Atoi(spaceDelimTokens[6])
+		Start_S, err := strconv.ParseInt(spaceDelimTokens[6], 10, 64)
 		if err != nil {
 			RErr = InvalidParameterErr(err.Error())
 			return
 		}
-		R_CRC, err := strconv.Atoi(spaceDelimTokens[7])
+		Start_NS, err := strconv.ParseInt(spaceDelimTokens[7], 10, 64)
 		if err != nil {
 			RErr = InvalidParameterErr(err.Error())
 			return
 		}
-		IsAccept, err := strconv.Atoi(spaceDelimTokens[8])
+		End_S, err := strconv.ParseInt(spaceDelimTokens[8], 10, 64)
 		if err != nil {
 			RErr = InvalidParameterErr(err.Error())
 			return
 		}
-		LastTry, err := strconv.Atoi(spaceDelimTokens[9])
+		End_NS, err := strconv.ParseInt(spaceDelimTokens[9], 10, 64)
 		if err != nil {
 			RErr = InvalidParameterErr(err.Error())
 			return
 		}
-		Start_S, err := strconv.ParseInt(spaceDelimTokens[10], 10, 64)
-		if err != nil {
-			RErr = InvalidParameterErr(err.Error())
-			return
-		}
-		Start_NS, err := strconv.ParseInt(spaceDelimTokens[11], 10, 64)
-		if err != nil {
-			RErr = InvalidParameterErr(err.Error())
-			return
-		}
-		End_S, err := strconv.ParseInt(spaceDelimTokens[12], 10, 64)
-		if err != nil {
-			RErr = InvalidParameterErr(err.Error())
-			return
-		}
-		End_NS, err := strconv.ParseInt(spaceDelimTokens[13], 10, 64)
+		IsAccept, err := strconv.Atoi(spaceDelimTokens[10])
 		if err != nil {
 			RErr = InvalidParameterErr(err.Error())
 			return
@@ -350,7 +334,39 @@ func processRequestLine(Ctxt *IPCContext, C net.Conn, line string) (Resp string,
 		Dst := NetAddr{DIP, DPort}
 		Start := time.Unix(Start_S, Start_NS)
 		End := time.Unix(End_S, End_NS)
-		Pair, err := Ctxt.find_pair(EP, Src, Dst, S_CRC, R_CRC, IsAccept != 0, LastTry != 0, Start, End)
+
+		err = Ctxt.endpoint_info(EP, Src, Dst, Start, End, IsAccept != 0)
+		if err != nil {
+			RErr = UnknownErr(err.Error())
+			return
+		}
+	case "FIND_PAIR":
+		// FIND_PAIR <endpoint id> <send_crc> <recv_crc> <done>
+		if len(spaceDelimTokens) < 5 {
+			RErr = InsufficientArgsErr()
+			return
+		}
+		EP, err := strconv.Atoi(spaceDelimTokens[1])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		S_CRC, err := strconv.Atoi(spaceDelimTokens[2])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		R_CRC, err := strconv.Atoi(spaceDelimTokens[3])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		LastTry, err := strconv.Atoi(spaceDelimTokens[4])
+		if err != nil {
+			RErr = InvalidParameterErr(err.Error())
+			return
+		}
+		Pair, err := Ctxt.find_pair(EP, S_CRC, R_CRC, LastTry != 0)
 		if err != nil {
 			RErr = UnknownErr(err.Error())
 			return

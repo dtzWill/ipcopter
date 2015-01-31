@@ -419,16 +419,36 @@ endpoint ipcd_crc_kludge(endpoint local, uint32_t s_crc, uint32_t r_crc,
   return EP_INVALID;
 }
 
-endpoint ipcd_find_pair(endpoint local, pairing_info &pi, bool last) {
+bool ipcd_endpoint_info(endpoint local, endpoint_info &ei) {
   ScopedLock L(getConnectLock());
   connect_if_needed();
 
   char buf[300];
-  int len = sprintf(
-      buf, "FIND_PAIR %d %s %d %s %d %d %d %d %d %ld %ld %ld %ld\n", local,
-      pi.src.addr, pi.src.port, pi.dst.addr, pi.dst.port, pi.s_crc, pi.r_crc,
-      pi.is_accept, last ? 1 : 0, pi.connect_start.tv_sec,
-      pi.connect_start.tv_nsec, pi.connect_end.tv_sec, pi.connect_end.tv_nsec);
+  int len =
+      sprintf(buf, "ENDPOINT_INFO %d %s %d %s %d %ld %ld %ld %ld %d\n", local,
+              ei.src.addr, ei.src.port, ei.dst.addr, ei.dst.port,
+              ei.connect_start.tv_sec, ei.connect_start.tv_nsec,
+              ei.connect_end.tv_sec, ei.connect_end.tv_nsec, ei.is_accept);
+  ASSERT_WITH_LOCK(len > 5);
+  int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
+  if (err < 0) {
+    perror("write");
+    ASSERT_WITH_LOCK(0);
+  }
+
+  err = __real_recv(ipcd_socket, buf, 50, MSG_NOSIGNAL);
+  ASSERT_WITH_LOCK(err > 5);
+
+  return strncmp(buf, "200 OK\n", err) == 0;
+}
+
+endpoint ipcd_find_pair(endpoint local, pairing_info &pi, bool last) {
+  ScopedLock L(getConnectLock());
+  connect_if_needed();
+
+  char buf[100];
+  int len = sprintf(buf, "FIND_PAIR %d %d %d %d\n", local, pi.s_crc, pi.r_crc,
+                    last ? 1 : 0);
   ASSERT_WITH_LOCK(len > 5);
   int err = __real_send(ipcd_socket, buf, len, MSG_NOSIGNAL);
   if (err < 0) {
@@ -440,9 +460,7 @@ endpoint ipcd_find_pair(endpoint local, pairing_info &pi, bool last) {
 
   buf[err] = 0;
   int id;
-  ipclog("find_pair(%d, <%s:%d>, <%s:%d>, %d, %d, %d) = %s\n", local,
-         pi.src.addr, pi.src.port, pi.dst.addr, pi.dst.port, pi.s_crc, pi.r_crc,
-         pi.is_accept, buf);
+  ipclog("find_pair(%d, %d, %d) = %s\n", local, pi.s_crc, pi.r_crc, buf);
   int n = sscanf(buf, "200 PAIR %d\n", &id);
   if (n == 1) {
     return id;

@@ -303,6 +303,32 @@ struct timespec get_time() {
   return ts;
 }
 
+// XXX: Put this elsewhere
+void get_netaddr(int fd, netaddr &na, bool local) {
+  struct sockaddr_storage addr;
+  socklen_t len = sizeof(addr);
+  int ret;
+  if (local)
+    ret = getsockname(fd, (struct sockaddr *)&addr, &len);
+  else
+    ret = getpeername(fd, (struct sockaddr *)&addr, &len);
+  assert(ret == 0);
+
+  if (addr.ss_family == AF_INET) {
+    struct sockaddr_in *s = (struct sockaddr_in *)&addr;
+    na.port = ntohs(s->sin_port);
+    const char *retstr = inet_ntop(AF_INET, &s->sin_addr, na.addr, sizeof(na.addr));
+    assert(retstr != NULL);
+  } else {
+    struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
+    na.port = ntohs(s->sin6_port);
+    const char *retstr =
+        inet_ntop(AF_INET6, &s->sin6_addr, na.addr, sizeof(na.addr));
+    assert(retstr != NULL);
+  }
+}
+
+
 void set_time(int fd, struct timespec start, struct timespec end) {
   endpoint ep = getEP(fd);
   assert(valid_ep(ep));
@@ -315,4 +341,14 @@ void set_time(int fd, struct timespec start, struct timespec end) {
 
   i.connect_start = start;
   i.connect_end = end;
+
+  endpoint_info ei;
+
+  ei.is_accept = i.is_accept;
+  ei.connect_start = start;
+  ei.connect_end = end;
+  get_netaddr(fd, ei.src, true);
+  get_netaddr(fd, ei.dst, false);
+
+  ipcd_endpoint_info(ep, ei);
 }
