@@ -303,12 +303,16 @@ struct timespec get_time() {
   return ts;
 }
 
-void set_time(int fd, bool start, struct timespec t) {
+void set_time(int fd, struct timespec start, struct timespec end) {
   endpoint ep = getEP(fd);
   assert(valid_ep(ep));
 
   ipc_info &i = getInfo(ep);
-  struct timespec &target = start ? i.connect_start : i.connect_end;
-  assert((target.tv_sec == 0 && target.tv_nsec == 0) && "Time already set??");
-  target = t;
+  assert((i.connect_start.tv_sec == 0 && i.connect_start.tv_nsec == 0) &&
+         "Start already set");
+  assert((i.connect_end.tv_sec == 0 && i.connect_end.tv_nsec == 0) &&
+         "End already set");
+
+  i.connect_start = start;
+  i.connect_end = end;
 }

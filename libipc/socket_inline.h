@@ -158,8 +158,7 @@ static inline int __internal_accept4(int fd, struct sockaddr *addr,
       register_inet_socket(ret, true);
       set_nonblocking(ret, (flags & SOCK_NONBLOCK) != 0);
       set_cloexec(ret, (flags & SOCK_CLOEXEC) != 0);
-      set_time(ret, true, start);
-      set_time(ret, false, end);
+      set_time(ret, start, end);
     }
   }
   return ret;
@@ -174,13 +173,16 @@ static inline int __internal_bind(int fd, const struct sockaddr *addr,
 static inline int __internal_connect(int fd, const struct sockaddr *addr,
                                      socklen_t addrlen) {
   bool is_reg = is_registered_socket(fd);
+  struct timespec start, end;
   if (is_reg) {
     assert(!is_accept(fd));
-    set_time(fd, true, get_time());
+    start = get_time();
   }
   int ret = __real_connect(fd, addr, addrlen);
-  if (is_reg)
-    set_time(fd, false, get_time());
+  if (is_reg) {
+    end = get_time();
+    set_time(fd, start, end);
+  }
   return ret;
 }
 
