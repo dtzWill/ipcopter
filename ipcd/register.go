@@ -432,8 +432,12 @@ func (C *IPCContext) find_pair(ID, S_CRC, R_CRC int, LastTry bool) (int, error) 
 			}
 			if Client.Start.After(Server.End) {
 				// Accept returned before connect() finished, definitely not valid
-				fmt.Println("Client connected after server accepted?!")
+				fmt.Println("Client connected after server accepted")
 				return ID, nil
+			}
+			if Server.Start.After(Client.End) {
+				// connect() finished before accept was called, also not valid.
+				fmt.Println("Client connected before server accepted")
 			}
 			ConnectToAcceptReturn := Server.End.Sub(Client.Start)
 			AcceptReturnToConnectReturn := Client.End.Sub(Server.End)
