@@ -37,6 +37,8 @@ type EndPointInfo struct {
 	Src        NetAddr
 	Dst        NetAddr
 	IsAccept   bool
+	Start      time.Time
+	End        time.Time
 	RefCount   int
 	ID         int
 }
@@ -58,6 +60,12 @@ func (N *NetAddr) isValid() bool {
 	return N.Port != -1
 }
 
+func CheckTimeDelta(D time.Duration) bool {
+	Epsilon := time.Duration(150 * time.Microsecond)
+
+	return D <= Epsilon && D >= -Epsilon
+}
+
 func NewContext() *IPCContext {
 	C := &IPCContext{}
 	C.EPMap = make(map[int]*EndPointInfo)
@@ -70,7 +78,17 @@ func (C *IPCContext) register(PID, FD int) (int, error) {
 
 	ID := C.FreeID
 
-	EPI := EndPointInfo{EndPoint{PID, FD}, nil, nil /* kludge pair */, 0 /* S_CRC */, 0 /* R_CRC */, InvalidAddr() /* Src */, InvalidAddr() /* Dst*/, false /* IsAccept */, 1 /* refcnt */, ID}
+	EPI := EndPointInfo{EndPoint{PID, FD}, nil,
+		nil,           /* kludge pair */
+		0,             /* S_CRC */
+		0,             /* R_CRC */
+		InvalidAddr(), /* Src */
+		InvalidAddr(), /* Dst*/
+		false,         /* IsAccept */
+		time.Time{},   /* Start */
+		time.Time{},   /* End */
+		1,             /* refcnt */
+		ID}
 
 	C.EPMap[ID] = &EPI
 
@@ -361,6 +379,8 @@ func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, IsAcc
 	EPI.Src = Src
 	EPI.Dst = Dst
 	EPI.IsAccept = IsAccept
+	EPI.Start = Start
+	EPI.End = End
 
 	MatchID := -1
 	for k, v := range C.EPMap {
@@ -376,7 +396,29 @@ func (C *IPCContext) find_pair(ID int, Src, Dst NetAddr, S_CRC, R_CRC int, IsAcc
 			if v.IsAccept != !IsAccept {
 				return ID, errors.New("match found but is_accept mismatch??")
 			}
-			MatchID = k
+
+			Client, Server := v, EPI
+			if !IsAccept {
+				Client, Server = EPI, v
+			}
+			if Client.Start.After(Server.End) {
+				// Accept returned before connect() finished, definitely not valid
+				fmt.Println("Client connected after server accepted?!")
+				return ID, nil
+			}
+			ConnectToAcceptReturn := Server.End.Sub(Client.Start)
+			AcceptReturnToConnectReturn := Client.End.Sub(Server.End)
+			fmt.Printf("Connect-Start To Accept Return: %s\n", ConnectToAcceptReturn)
+			fmt.Printf("Accept Return to Connect Return: %s\n", AcceptReturnToConnectReturn)
+			fmt.Printf("Connect Duration: %s\n", Client.End.Sub(Client.Start))
+			fmt.Printf("Accept Duration: %s\n", Server.End.Sub(Server.Start))
+			if CheckTimeDelta(AcceptReturnToConnectReturn) {
+				MatchID = k
+			} else {
+				// times weren't close enough, bail
+				fmt.Println("Times not close enough!!")
+				return ID, nil
+			}
 			break
 		}
 	}
