@@ -79,7 +79,7 @@ func (E *EndPointInfo) matchesWithoutCRC(R *EndPointInfo) bool {
 
 	// Use "IsAccept" to designate client/server
 	Client, Server := E, R
-	if !E.IsAccept {
+	if E.IsAccept {
 		Client, Server = R, E
 	}
 
