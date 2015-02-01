@@ -39,6 +39,7 @@ bool is_accept(int fd);
 
 // Options
 void set_nonblocking(int fd, bool nonblocking);
+bool get_nonblocking(int fd);
 void set_local_nonblocking(int fd, bool nonblocking);
 void set_cloexec(int fd, bool cloexec);
 

@@ -284,6 +284,15 @@ void set_nonblocking(int fd, bool non_blocking) {
   getInfo(ep).non_blocking = non_blocking;
 }
 
+bool get_nonblocking(int fd) {
+  assert(ipcd_enabled());
+
+  endpoint ep = getEP(fd);
+  assert(valid_ep(ep));
+
+  return getInfo(ep).non_blocking;
+}
+
 void set_cloexec(int fd, bool cloexec) {
   if (!ipcd_enabled())
     return;

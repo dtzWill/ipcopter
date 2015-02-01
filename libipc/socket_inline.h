@@ -148,8 +148,11 @@ static inline int __internal_accept4(int fd, struct sockaddr *addr,
                                      socklen_t *addrlen, int flags) {
   struct timespec start, end;
   bool is_registered = is_registered_socket(fd);
-  if (is_registered)
+  if (is_registered) {
     start = get_time();
+    // Okay so this could be non-blocking...
+    // assert(!get_nonblocking(fd));
+  }
   int ret = __real_accept4(fd, addr, addrlen, flags);
   if (is_registered) {
     end = get_time();
@@ -177,6 +180,7 @@ static inline int __internal_connect(int fd, const struct sockaddr *addr,
   if (is_reg) {
     assert(!is_accept(fd));
     start = get_time();
+    assert(!get_nonblocking(fd));
   }
   int ret = __real_connect(fd, addr, addrlen);
   if (is_reg && ret != -1) {
