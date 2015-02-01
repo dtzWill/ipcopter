@@ -179,7 +179,7 @@ static inline int __internal_connect(int fd, const struct sockaddr *addr,
     start = get_time();
   }
   int ret = __real_connect(fd, addr, addrlen);
-  if (is_reg) {
+  if (is_reg && ret != -1) {
     end = get_time();
     set_time(fd, start, end);
   }
