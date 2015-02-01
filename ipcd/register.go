@@ -87,12 +87,14 @@ func (E *EndPointInfo) matchesWithoutCRC(R *EndPointInfo) bool {
 	// looking at the code below.  Oh well O:)
 
 	if Client.Start.After(Server.End) {
-		// Accept returned before connect() finished, definitely not valid
+		// Accept returned before connect() started, definitely not valid
 		return false
 	}
 	if Server.Start.After(Client.End) {
 		// connect() finished before accept was called, also not valid.
-		return false
+		// XXX: Nope, this definitely can happen.  This might happen generally,
+		//      but can easily happen with non-blocking accept().
+		// return false
 	}
 
 	// TODO: Check time delta? Or is this enough?
