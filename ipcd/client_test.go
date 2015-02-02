@@ -471,6 +471,8 @@ func TestTimingAcceptLate(t *testing.T) {
 	P := StartServerProcess()
 	defer Stop(P)
 
+	t.SkipNow()
+
 	CheckReq("REGISTER 1 10\n", "200 ID 0", t)
 	CheckReq("REGISTER 1 15\n", "200 ID 1", t)
 	CheckReq("REGISTER 1 20\n", "200 ID 2", t)
