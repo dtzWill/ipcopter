@@ -180,12 +180,24 @@ static inline int __internal_connect(int fd, const struct sockaddr *addr,
   if (is_reg) {
     assert(!is_accept(fd));
     start = get_time();
-    assert(!get_nonblocking(fd));
   }
   int ret = __real_connect(fd, addr, addrlen);
-  if (is_reg && ret != -1) {
-    end = get_time();
-    set_time(fd, start, end);
+  if (is_reg) {
+    if (ret != -1) {
+      // If this was successful, we're done here.
+      end = get_time();
+      set_time(fd, start, end);
+    } else {
+      // If non-blocking and connect-in-progress...
+      if (errno == EINPROGRESS && get_nonblocking(fd)) {
+        // XXX: THIS IS WRONG
+        // Assume connect() succeeds (!)
+        // and submit end time as now, since we don't look at it.
+        ipclog("async connect(), using start time and fake end time...\n");
+        end = get_time();
+        set_time(fd, start, end);
+      }
+    }
   }
   return ret;
 }
