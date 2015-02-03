@@ -80,6 +80,7 @@ struct ipc_info {
   bool non_blocking;
   // Was this created with accept()?
   bool is_accept;
+  bool sent_info;
 
   ipc_info() { reset(); }
   void reset() {
@@ -93,7 +94,8 @@ struct ipc_info {
     ref_count = 0;
     state = STATE_INVALID;
     non_blocking = false;
-    is_accept = 0;
+    is_accept = false;
+    sent_info = false;
   }
 };
 

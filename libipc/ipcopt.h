@@ -50,6 +50,7 @@ char is_protected_fd(int fd);
 // Timing
 struct timespec get_time();
 void set_time(int fd, struct timespec start, struct timespec end);
+void submit_info_if_needed(int fd);
 
 // R/W operations using best available transport
 ssize_t do_ipc_send(int fd, const void *buf, size_t count, int flags);

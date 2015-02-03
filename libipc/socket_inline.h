@@ -162,6 +162,7 @@ static inline int __internal_accept4(int fd, struct sockaddr *addr,
       set_nonblocking(ret, (flags & SOCK_NONBLOCK) != 0);
       set_cloexec(ret, (flags & SOCK_CLOEXEC) != 0);
       set_time(ret, start, end);
+      submit_info_if_needed(ret);
     }
   }
   return ret;
@@ -187,6 +188,7 @@ static inline int __internal_connect(int fd, const struct sockaddr *addr,
       // If this was successful, we're done here.
       end = get_time();
       set_time(fd, start, end);
+      submit_info_if_needed(ret);
     } else {
       // If non-blocking and connect-in-progress...
       if (errno == EINPROGRESS && get_nonblocking(fd)) {

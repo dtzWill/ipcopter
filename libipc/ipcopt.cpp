@@ -313,7 +313,7 @@ struct timespec get_time() {
 }
 
 // XXX: Put this elsewhere
-void get_netaddr(int fd, netaddr &na, bool local) {
+bool get_netaddr(int fd, netaddr &na, bool local) {
   struct sockaddr_storage addr;
   socklen_t len = sizeof(addr);
   int ret;
@@ -321,7 +321,10 @@ void get_netaddr(int fd, netaddr &na, bool local) {
     ret = getsockname(fd, (struct sockaddr *)&addr, &len);
   else
     ret = getpeername(fd, (struct sockaddr *)&addr, &len);
-  assert(ret == 0);
+  if (ret != 0) {
+    perror("get_netaddr getsockname/getpeername");
+    return false;
+  }
 
   if (addr.ss_family == AF_INET) {
     struct sockaddr_in *s = (struct sockaddr_in *)&addr;
@@ -335,6 +338,8 @@ void get_netaddr(int fd, netaddr &na, bool local) {
         inet_ntop(AF_INET6, &s->sin6_addr, na.addr, sizeof(na.addr));
     assert(retstr != NULL);
   }
+
+  return true;
 }
 
 
@@ -351,13 +356,32 @@ void set_time(int fd, struct timespec start, struct timespec end) {
   i.connect_start = start;
   i.connect_end = end;
 
+  assert(!i.sent_info);
+}
+
+void submit_info_if_needed(int fd) {
+  if (!is_registered_socket(fd))
+    return;
+  endpoint ep = getEP(fd);
+
+  ipc_info &i = getInfo(ep);
+  if (i.state != STATE_UNOPT)
+    return;
+
+  if (i.sent_info)
+    return;
+
   endpoint_info ei;
-
   ei.is_accept = i.is_accept;
-  ei.connect_start = start;
-  ei.connect_end = end;
-  get_netaddr(fd, ei.src, true);
-  get_netaddr(fd, ei.dst, false);
+  ei.connect_start = i.connect_start;
+  ei.connect_end = i.connect_end;
 
-  ipcd_endpoint_info(ep, ei);
+  if (!get_netaddr(fd, ei.src, true) ||
+      !get_netaddr(fd, ei.dst, false)) {
+    ipclog("Unable to gather info for fd=%d, ep=%d\n", fd, ep);
+    return;
+  }
+  i.sent_info = ipcd_endpoint_info(ep, ei);
+  assert(i.sent_info);
+  ipclog("submitted info for fd=%d, ep=%d\n", fd, ep);
 }

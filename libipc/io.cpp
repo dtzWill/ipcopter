@@ -154,6 +154,7 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
 
   // If localized, just use fast socket:
   if (i.state == STATE_OPTIMIZED) {
+    assert(i.sent_info);
     ssize_t ret = IO(i.localfd, buf, count, flags);
     if (!(flags & MSG_PEEK)) {
       update_stats(fd, send, buf, ret);
@@ -214,6 +215,8 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
   if (!(flags & MSG_PEEK)) {
     update_stats(fd, send, buf, ret);
   }
+  if (ret != -1)
+    submit_info_if_needed(fd);
 
   return ret;
 }
@@ -323,6 +326,8 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
   ssize_t ret = IO(fd, vec, count);
 
   update_stats_vec(fd, send, vec, ret);
+  if (ret != -1)
+    submit_info_if_needed(fd);
   return ret;
 }
 
