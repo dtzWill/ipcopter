@@ -145,6 +145,8 @@ void attempt_optimization(int fd, bool send) {
       // Configure localfd
       copy_bufsizes(fd, i.localfd);
       set_local_nonblocking(fd, i.non_blocking);
+    } else {
+      i.state = STATE_NOOPT;
     }
   }
 }
@@ -167,6 +169,9 @@ ssize_t do_ipc_io(int fd, buf_t buf, size_t count, int flags, IOFunc IO,
     }
     return ret;
   }
+
+  if (i.state == STATE_NOOPT)
+    return IO(fd, buf, count, flags);
 
   // Otherwise, use original fd:
   size_t &bytes = get_byte_counter(i, send);
@@ -291,6 +296,10 @@ ssize_t do_ipc_iov(int fd, const struct iovec *vec, int count, IOVFunc IO,
     ssize_t ret = IO(i.localfd, vec, count);
     update_stats_vec(fd, send, vec, ret);
     return ret;
+  }
+
+  if (i.state == STATE_NOOPT) {
+    return IO(fd, vec, count);
   }
 
   size_t bytes = 0;

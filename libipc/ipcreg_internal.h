@@ -37,6 +37,7 @@ enum EndpointState {
   STATE_UNOPT,
   STATE_ID_EXCHANGE,
   STATE_OPTIMIZED,
+  STATE_NOOPT
 };
 
 struct epoll_entry {
