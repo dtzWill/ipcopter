@@ -101,6 +101,12 @@ void attempt_optimization(int fd, bool send) {
   if (get_byte_counter(i, send) == TRANS_THRESHOLD) {
     ipclog("Completed partial operation to sync at THRESHOLD for fd=%d!\n", fd);
 
+    // If we're here, we definitely should have already submitted info.
+    // XXX: This happens if first IO operation causes us to cross our
+    // threshold.  This fixes it for now, but should be done earlier.
+    submit_info_if_needed(fd);
+
+
     // TODO: Async!
     endpoint remote = EP_INVALID;
     size_t attempts = 0;
