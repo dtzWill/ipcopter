@@ -1,3 +1,17 @@
+//===-- getfromlibc.h -----------------------------------------------------===//
+//
+// Slipstream: Automatic Interprocess Communication Optimization
+//
+// Copyright (c) 2015, Will Dietz <w@wdtz.org>
+// This file is distributed under the ISC license, see LICENSE for details.
+//
+// http://wdtz.org/slipstream
+//
+//===----------------------------------------------------------------------===//
+//
+// Obtain pointer to libc-defined version of specified function.
+//
+//===----------------------------------------------------------------------===//
 #ifndef _GET_FROM_LIBC_
 #define _GET_FROM_LIBC_
 

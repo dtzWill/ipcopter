@@ -1,9 +1,11 @@
 //===-- ipcreg_internal.h -------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
+// Slipstream: Automatic Interprocess Communication Optimization
 //
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Copyright (c) 2015, Will Dietz <w@wdtz.org>
+// This file is distributed under the ISC license, see LICENSE for details.
+//
+// http://wdtz.org/slipstream
 //
 //===----------------------------------------------------------------------===//
 //
